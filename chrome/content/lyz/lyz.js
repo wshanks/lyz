@@ -450,44 +450,18 @@ Zotero.Lyz = {
 	}
 	items = this.exportToBibtex(zitems);
 	for (var id in items){
-	    text = items[id].toString();
 	    var entries_text = "";
 	    var keys = new Array();
-	
-	    tmp = this.createCiteKey(text);
-	    key = tmp[0];
-	    keys.push(key);
+	    var citekey = items[id][0];
+	    var text = items[id][1];
+
+	    keys.push(citekey);
 	    //check database, if not in, append to entries_text
 	    //single key can be associated with several bibtex files
-	    zid = this.DB.query("SELECT zid FROM keys WHERE key=\""+key+"\" AND bib=\""+bib+"\"");
+	    zid = this.DB.query("SELECT zid FROM keys WHERE key=\""+citekey+"\" AND bib=\""+bib+"\"");
 	    if(!zid){
-		this.DB.query("INSERT INTO keys VALUES(null,\""+key+"\",\""+bib+"\","+id+")");
-		entries_text+=tmp[1]+"\n";
-	    } else {
-		// the rare case when author published the same title twice in the same year
-		// this is also happen when citation copy of an entry, but that's OK.
-		// append the Zotero ID, which is unique, to the new key, so it can be recognized later
-		// thus try if there is also key_zid first
-		zid = this.DB.query("SELECT zid FROM keys WHERE key=\""+key+"_"
-				    +zid.toString()+"\" AND bib=\""+bib+"\"");
-		if(!zid){// key_zid not found, this may be just unique reference!
-		    
-		    // this could be the same reference, just modified!
-		    // if modified, just get all references for the bibtex file and export all
-		    
-		    //is this the best way to check the identity?
-		    if (olditem_biblio == biblio.text){
-			
-		    } else {
-			var res = prompt("Cite key "+key+" already exists!\nPlease edit the key.\n"+
-					 "Old reference:\n"+olditem_biblio.text+"\n\nNew reference:\n"+
-					 biblio.text,key);
-			if (!res) return;
-		    }
-		    
-		    this.DB.query("INSERT INTO keys VALUES(null,\""+key+"\",\""+bib+"\","+id+")");
-		    entries_text+=tmp[1]+"\n";
-		}
+		this.DB.query("INSERT INTO keys VALUES(null,\""+citekey+"\",\""+bib+"\","+id+")");
+		entries_text+=text+"\n";
 	    }
 	}	
 	if (!entries_text=="") this.updateBibtex(bib,entries_text);
@@ -571,9 +545,10 @@ Zotero.Lyz = {
 	var format = "bibliography=http://www.zotero.org/styles/chicago-author-date";
 	var biblio = Zotero.QuickCopy.getContentFromItems([item],format);
 	return biblio.text;
-    }
+    },
     
     exportToBibtex: function (items){
+	// returns hash {id:[citekey,text]}
 	var text;
 	var callback = function(obj, worked) {
 	    text = obj.output.replace(/\r\n/g, "\n");
@@ -585,14 +560,16 @@ Zotero.Lyz = {
 	var tmp = new Array();
 	for (var i=0;i<items.length;i++){
 	    var id = items[i].id;
-	    translation.setItems(items);
+	    translation.setItems([items[i]]);
 	    translation.translate();
-	    tmp[id] = text;
+	    var ct = this.createCiteKey(text);
+	    tmp[id] = [ct[0],ct[1]];
 	}
 	return tmp;
     },
 
-    updateBibtex: function(bib,entries_text) {
+    updateBibtex: function(bib,entries_text, replace) {
+	var replace = replace || false;
 	// write to bibtex file
 	var fbibtex = Components.classes["@mozilla.org/file/local;1"]
 	    .createInstance(Components.interfaces.nsILocalFile);
@@ -604,7 +581,9 @@ Zotero.Lyz = {
 	}
 	var fbibtex_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIFileOutputStream);
-	fbibtex_stream.init(fbibtex, 0x02| 0x10, 0666, 0); // write, append
+
+	if (replace) fbibtex_stream.init(fbibtex, 0x02| 0x20, 0666, 0);// write , truncate
+	else fbibtex_stream.init(fbibtex, 0x02| 0x10, 0666, 0); // write, append
 
 	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIConverterOutputStream);
@@ -614,7 +593,24 @@ Zotero.Lyz = {
     },
     
     updateBibtexAll: function(){
-	alert("Sorry, not implemented yet.");
+	var res = this.checkDocInDB();
+	if(!res) {alert("ERROR: updateBibtexAll"); return;}
+	var doc = res[1];
+	var bib = res[0];
+	// get all ids for the bibtex file
+	var ids_h = this.DB.query("SELECT zid FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
+	var ids = new Array();
+	for (var i=0;i<ids_h.length;i++){
+	    ids.push(ids_h[i]['zid']);
+	}
+	
+	var ex = this.exportToBibtex(Zotero.Items.get(ids));
+	var text = "";
+	for (var id in ex){
+	    text+=ex[id][1];
+	}
+	this.updateBibtex(bib,text,true);
+	alert("Your BibTeX database "+bib+" has been updated.");
     },
     
     dialog_FilePickerOpen: function(title,filter_title,filter){
