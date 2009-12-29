@@ -322,16 +322,14 @@ Zotero.Lyz = {
 	if (!this.DB.tableExists('docs')) {
 	    sql = "CREATE TABLE docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)"
 	    this.DB.query(sql);
-	    sql = "CREATE TABLE keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid INT)"
+	    sql = "CREATE TABLE keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)"
 	    this.DB.query(sql);
-	}
-	
+	} 
 	//set up preferences
 	this.prefs = Components.classes["@mozilla.org/preferences-service;1"].
 	    getService(Components.interfaces.nsIPrefService);
 	this.prefs = this.prefs.getBranch("extensions.lyz.");	
-	this.createUI();	
-
+	
     },
     
     lyxGetDoc: function(){
@@ -604,6 +602,9 @@ Zotero.Lyz = {
 	    
 	var tmp = new Array();
 	for (var i=0;i<items.length;i++){
+	    // key = item.key;
+	    // k = z.Items.parseLibraryKeyHash(key);
+	    // sameitem = z.Items.getByLibraryAndKey(null, key)
 	    var id = items[i].id;
 	    translation.setItems([items[i]]);
 	    translation.translate();
@@ -699,4 +700,4 @@ Zotero.Lyz = {
     }
 }
 
-window.addEventListener('load', function(e) { Zotero.Lyz.init(); }, false);
+window.addEventListener('load', function(e) { Zotero.Lyz.createUI(); }, false);
