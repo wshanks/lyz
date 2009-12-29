@@ -1,0 +1,27 @@
+* TODO
+** Allow deletion from database
+** not initialized when new window opened
+
+* Requests
+** update lyz from bibtex file 
+** Notification about current doc and citekey
+** Doc and bib in subversion
+
+* NOTES
+
+
+1) We use a group library for the reference and the key format would be the same for all authors. Currently we just export the entire library as a bibtex file whenever a change is made and replace the existing file. With this new plugin I see two scenarios that can result in duplicates. (I assume that you know how subversion works.)
+
+a) Two people edit the document at the same time and add the same citation. In this case subversion either detects that the bibtex files are identical and just uses one of these. If the authors also add other citations so that the bibtex files are no longer identical, this would create a conflict. So no problem here.
+
+b) One person adds a citation and commits the bibtex file. A second person updates his working copy and now has a bibtex file containing the said reference. When he now cites this reference, it is added to the bibtex file again. This is a problem that can be solved only by your plugin.
+
+* ZOTERO
+** disable search for string shorter than 2?
+** single instance of zotero
+
+Dan, thanks. I understand now.
+Would you be so kind and give me a hint on the initialization. You commented on that earlier. That's one thing I haven't improved yet. I have basically followed the helloworld example and the createUI is from the old Lytero plugin.
+You said: "You can probably init() from include.js (without createUI()) and just call createUI() in the window load handler." I'm not really sure how to do that.
+
+
