@@ -494,7 +494,7 @@ Zotero.Lyz = {
 	    //single key can be associated with several bibtex files
 	    zid = this.DB.query("SELECT zid FROM keys WHERE key=\""+citekey+"\" AND bib=\""+bib+"\"");
 	    if(!zid){
-		this.DB.query("INSERT INTO keys VALUES(null,\""+citekey+"\",\""+bib+"\","+id+")");
+		this.DB.query("INSERT INTO keys VALUES(null,\""+citekey+"\",\""+bib+"\",\""+id+"\")");
 		entries_text+=text+"\n";
 	    }
 	}	
@@ -602,10 +602,7 @@ Zotero.Lyz = {
 	    
 	var tmp = new Array();
 	for (var i=0;i<items.length;i++){
-	    // key = item.key;
-	    // k = z.Items.parseLibraryKeyHash(key);
-	    // sameitem = z.Items.getByLibraryAndKey(null, key)
-	    var id = items[i].id;
+	    var id =Zotero.Items.getLibraryKeyHash(items[i]);
 	    translation.setItems([items[i]]);
 	    translation.translate();
 	    var ct = this.createCiteKey(text);
@@ -643,6 +640,7 @@ Zotero.Lyz = {
 	if(!res) {alert("ERROR: updateBibtexAll"); return;}
 	var doc = res[1];
 	var bib = res[0];
+	if (!bib) return;
 	var citekey = this.prefs.getCharPref("citekey");
 	var p = confirm("You are going to update BibTeX database:\n"+
 		      bib+"\nCurrent cite key format: \""+
@@ -652,10 +650,11 @@ Zotero.Lyz = {
 	    var ids_h = this.DB.query("SELECT zid FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
 	    var ids = new Array();
 	    for (var i=0;i<ids_h.length;i++){
-		ids.push(ids_h[i]['zid']);
+		var key = ids_h[i]['zid'];
+		ids.push(this.getZoteroItem(key));
 	    }
 	    
-	    var ex = this.exportToBibtex(Zotero.Items.get(ids));
+	    var ex = this.exportToBibtex(ids);
 	    var text = "";
 	    for (var id in ex){
 		text+=ex[id][1];
@@ -665,6 +664,12 @@ Zotero.Lyz = {
 	}
     },
     
+    getZoteroItem: function(key){
+	var keyhash = Zotero.Items.parseLibraryKeyHash(key);
+	return Zotero.Items.getByLibraryAndKey(keyhash.libraryID, keyhash.key);
+
+    },
+
     dialog_FilePickerOpen: function(title,filter_title,filter){
 	var nsIFilePicker = Components.interfaces.nsIFilePicker;
 	var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
