@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://lyz/skin/overlay.css" type="text/css"?>
+<!DOCTYPE window SYSTEM "chrome://lytero/locale/lytero.dtd">
+
+<overlay id="lyz-overlay"
+	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	
+	<stringbundleset id="stringbundleset">
+		<stringbundle id="lyz-strings"
+			src="chrome://lyz/locale/lyz.properties"/>
+	</stringbundleset>
+	
+	<!-- Include the main extension logic -->
+	<script src="chrome://zotero/content/include.js"/>
+	<script src="chrome://lyz/content/include.js"/>
+</overlay>

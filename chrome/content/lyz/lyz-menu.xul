@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://lyz/skin/overlay.css" type="text/css"?>
+<!DOCTYPE window SYSTEM "chrome://lyz/locale/lyz.dtd">
+
+<overlay id="lyz-menu-overlay"
+	 xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+  
+  <stringbundleset id="stringbundleset">
+    <stringbundle id="lyz-strings"
+		  src="chrome://lyz/locale/lyz.properties"/>
+  </stringbundleset>
+  
+  <toolbarbutton id="lyz-menu-button" tooltiptext="LyZ" type="menu">
+    <menupopup id="lyz-menupopup">
+      <menuitem id="lyz-send" 
+		label="&cite;" 
+		oncommand="Zotero.Lyz.checkAndCite()"/>
+      <menuseparator />
+      <menuitem id="lyz-settings" label="&settings;"
+      		oncommand="Zotero.Lyz.settings()"/>
+      
+    </menupopup>
+  </toolbarbutton>  
+  <!-- context menu -->
+  <popup id="zotero-itemmenu">
+    <menuseparator />
+    <menuitem label="&cite;"
+	      oncommand="Zotero.Lyz.checkAndCite()"/>
+  </popup>
+</overlay>

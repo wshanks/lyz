@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<dialog
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  id="lyz-settings-dialog"
+  title="Settings"
+  onload="return onLoad();"
+  ondialogaccept="return onOK();">
+  <script type="application/javascript" src="chrome://lyz/content/settings.js"/>
+  <grid>
+    <columns><column/><column/></columns>
+    <rows>
+      <row align="center">
+	<label value="Lyx Server"/><textbox id="lyxserver"/>
+      </row>
+      <row align="center"><label value="Cite Key"/><textbox id="citekey"/></row>
+    </rows>
+  </grid>
+</dialog>
