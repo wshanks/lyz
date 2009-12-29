@@ -15,6 +15,9 @@
       <menuitem id="lyz-send" 
 		label="&cite;" 
 		oncommand="Zotero.Lyz.checkAndCite()"/>
+      <menuitem id="lyz-update-bibtex" 
+		label="&update-bibtex;"
+		oncommand="Zotero.Lyz.updateBibtexAll()"/>
       <menuseparator />
       <menuitem id="lyz-settings" label="&settings;"
       		oncommand="Zotero.Lyz.settings()"/>

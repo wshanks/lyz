@@ -307,6 +307,7 @@ Zotero.Lyz = {
     DB: null,
     
     createUI: function() {
+//	if ( document.getElementById("lyz-menu-button")) alert("GOOD");
 	var parentn = document.getElementById("zotero-items-pane").firstChild;
 	var lyzb = document.createElement("toolbarbutton");
 	lyzb.setAttribute("id", "lyz-menu-button");
@@ -314,6 +315,7 @@ Zotero.Lyz = {
 	parentn.insertBefore(lyzb, siblingn);
 	parentn.insertBefore(document.createElement("toolbarseparator"),siblingn);	
 	document.loadOverlay("chrome://lyz/content/lyz-menu.xul", null);
+
     },
     
     init: function () {
@@ -705,4 +707,3 @@ Zotero.Lyz = {
     }
 }
 
-window.addEventListener('load', function(e) { Zotero.Lyz.createUI(); }, false);
