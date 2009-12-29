@@ -428,36 +428,27 @@ Zotero.Lyz = {
 	var bib_file;
 
 	if (!bib) {
-	    // all bib files
-	    var bibs = this.DB.query("SELECT bib FROM docs GROUP BY bib");
-	    if (bibs.length==0){
-		bib_file = this.dialog_FilePicker("Select Bibtex file for "+doc,"Bibtex", "*.bib");
-	    } else if (bibs.length==1){
-		this.addNewDocument(doc,bibs[0]['bib']);
-	    } else {// offer the choice from old ones
-		t = "Press OK if you want to create new BibTeX database.\nPress NO to select from your existing databases";
-		var res = confirm(t);
-		if(res){
-		    bib_file = this.dialog_FilePicker("Select Bibtex file for "+doc,"Bibtex", "*.bib");
-		} else {
-		    TODO
-		}
+	    t = "Press OK to create new BibTeX database.\n";
+	    t+= "Press NO to select from your existing databases";
+	    var res = confirm(t);
+	    if(res){
+		bib_file = this.dialog_FilePickerSave("Select Bibtex file for "+doc,"Bibtex", "*.bib");
+	    } else {
+		bib_file = this.dialog_FilePickerOpen("Select Bibtex file for "+doc,"Bibtex", "*.bib");
 	    }
-	    
-	    if(!bib_file.exists()){
-		bib_file.create(bib_file.NORMAL_FILE_TYPE,0666);
-	    }
+
 	    bib = bib_file.path;
 	    if (bib_file) this.addNewDocument(doc,bib);
 	    else return;
 	}
 	// export citation to Bibtex
-	var items = ZoteroPane.getSelectedItems();
-	if(!items.length){
+	var zitems = ZoteroPane.getSelectedItems();
+	// FIXME: this should be called bellow, but it returns empty there (???)
+	if(!zitems.length){
 	    alert("Please select at least one citation.");
 	    return;
 	}
-	items = this.exportToBibtex(items);
+	items = this.exportToBibtex(zitems);
 	for (var id in items){
 	    text = items[id].toString();
 	    var entries_text = "";
@@ -479,11 +470,21 @@ Zotero.Lyz = {
 		// thus try if there is also key_zid first
 		zid = this.DB.query("SELECT zid FROM keys WHERE key=\""+key+"_"
 				    +zid.toString()+"\" AND bib=\""+bib+"\"");
-		if(!zid){// key_zid not found, create it
-		    format = "bibliography=http://www.zotero.org/styles/chicago-author-date";
-		    biblio = Zotero.QuickCopy.getContentFromItems(items,format).text;
-		    var res = prompt("Cite key "+key+"already exists!\nPlease edit the key.\n"
-				     +biblio+"\n",key);
+		if(!zid){// key_zid not found, this may be just unique reference!
+		    
+		    // this could be the same reference, just modified!
+		    // if modified, just get all references for the bibtex file and export all
+		    
+		    //is this the best way to check the identity?
+		    if (olditem_biblio == biblio.text){
+			
+		    } else {
+			var res = prompt("Cite key "+key+" already exists!\nPlease edit the key.\n"+
+					 "Old reference:\n"+olditem_biblio.text+"\n\nNew reference:\n"+
+					 biblio.text,key);
+			if (!res) return;
+		    }
+		    
 		    this.DB.query("INSERT INTO keys VALUES(null,\""+key+"\",\""+bib+"\","+id+")");
 		    entries_text+=tmp[1]+"\n";
 		}
@@ -565,6 +566,12 @@ Zotero.Lyz = {
 	return [citekey,text];
     },
     
+
+    exportToBibliography: function(item){
+	var format = "bibliography=http://www.zotero.org/styles/chicago-author-date";
+	var biblio = Zotero.QuickCopy.getContentFromItems([item],format);
+	return biblio.text;
+    }
     
     exportToBibtex: function (items){
 	var text;
@@ -605,8 +612,23 @@ Zotero.Lyz = {
 	cstream.writeString(entries_text);
 	cstream.close();
     },
+    
+    updateBibtexAll: function(){
+	alert("Sorry, not implemented yet.");
+    },
+    
+    dialog_FilePickerOpen: function(title,filter_title,filter){
+	var nsIFilePicker = Components.interfaces.nsIFilePicker;
+	var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+	fp.init(window, title, nsIFilePicker.modeOpen);
+	fp.appendFilter(filter_title,filter);
+	var res = fp.show();
+	if (res == nsIFilePicker.returnOK){
+	    return fp.file;
+	}
+    },
 
-    dialog_FilePicker: function(title,filter_title,filter){
+    dialog_FilePickerSave: function(title,filter_title,filter){
 	var nsIFilePicker = Components.interfaces.nsIFilePicker;
 	var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
 	fp.init(window, title, nsIFilePicker.modeSave);
