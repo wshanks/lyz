@@ -457,12 +457,20 @@ Zotero.Lyz = {
 
 	if (!bib) {
 	    t = "Press OK to create new BibTeX database.\n";
-	    t+= "Press NO to select from your existing databases";
-	    var res = confirm(t);
+	    t+= "Press Cancel to select from your existing databases";
+	    // FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
+	    // var check = { value: true };
+	    // var ifps = Components.interfaces.nsIPromptService;
+	    // var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+	    // promptService = promptService.QueryInterface(ifps);
+	    // var res = confirm(t,"BibTex databse selection",
+	    // 		      ifps.STD_YES_NO_BUTTONS,null,null,null,"",check);
+	    var res = confirm(t,"BibTex databse selection");
 	    if(res){
 		bib_file = this.dialog_FilePickerSave("Select Bibtex file for "+doc,"Bibtex", "*.bib");
 	    } else {
 		bib_file = this.dialog_FilePickerOpen("Select Bibtex file for "+doc,"Bibtex", "*.bib");
+		if(!bib_file) return;
 	    }
 
 	    bib = bib_file.path;
@@ -634,20 +642,26 @@ Zotero.Lyz = {
 	if(!res) {alert("ERROR: updateBibtexAll"); return;}
 	var doc = res[1];
 	var bib = res[0];
-	// get all ids for the bibtex file
-	var ids_h = this.DB.query("SELECT zid FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
-	var ids = new Array();
-	for (var i=0;i<ids_h.length;i++){
-	    ids.push(ids_h[i]['zid']);
+	var citekey = this.prefs.getCharPref("citekey");
+	var p = confirm("You are going to update BibTeX database:\n"+
+		      bib+"\nCurrent cite key format: \""+
+		      citekey+"\", will be used.\nDo you want to continue?");
+	if (p){
+	    // get all ids for the bibtex file
+	    var ids_h = this.DB.query("SELECT zid FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
+	    var ids = new Array();
+	    for (var i=0;i<ids_h.length;i++){
+		ids.push(ids_h[i]['zid']);
+	    }
+	    
+	    var ex = this.exportToBibtex(Zotero.Items.get(ids));
+	    var text = "";
+	    for (var id in ex){
+		text+=ex[id][1];
+	    }
+	    this.updateBibtex(bib,text,true);
+	    alert("Your BibTeX database "+bib+" has been updated.");
 	}
-	
-	var ex = this.exportToBibtex(Zotero.Items.get(ids));
-	var text = "";
-	for (var id in ex){
-	    text+=ex[id][1];
-	}
-	this.updateBibtex(bib,text,true);
-	alert("Your BibTeX database "+bib+" has been updated.");
     },
     
     dialog_FilePickerOpen: function(title,filter_title,filter){
