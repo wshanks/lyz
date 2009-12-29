@@ -318,6 +318,7 @@ Zotero.Lyz = {
     
     init: function () {
 	this.DB = new Zotero.DBConnection("lyz");
+	var sql;
 	if (!this.DB.tableExists('docs')) {
 	    sql = "CREATE TABLE docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)"
 	    this.DB.query(sql);
@@ -334,23 +335,33 @@ Zotero.Lyz = {
     },
     
     lyxGetDoc: function(){
+	var res;
+	var fre;
+	var fname
 	res = this.lyxPipeWrite("server-get-filename");
 	if(!res) {
 	    alert("Could not contact server at: "+this.prefs.getCharPref("lyxserver"));
 	    return;
 	}
 	
-	response = this.lyxPipeRead();
+	res = this.lyxPipeRead();
 	fre = /.*server-get-filename:(.*)\n$/;
-	filename = fre.exec(response);
-	if (filename==null) {alert("ERROR: lyxGetDoc: "+response);}
+	fname = fre.exec(res);
+	if (fname==null) {alert("ERROR: lyxGetDoc: "+res);}
 	
-	return filename[1];
+	return fname[1];
     },
     
     lyxPipeRead: function(){
 	// reading from lyxpipe.out
-	var pipeout = Components.classes["@mozilla.org/file/local;1"]
+	var pipeout;
+	var path;
+	var pipeout_stream;
+	var cstream;
+	var data;
+	var str;
+	
+	pipeout = Components.classes["@mozilla.org/file/local;1"]
 	    .createInstance(Components.interfaces.nsILocalFile);
 	path = this.prefs.getCharPref("lyxserver");
 	pipeout.initWithPath(path+".out");
@@ -358,14 +369,14 @@ Zotero.Lyz = {
 	    alert("The specified LyXServer pipe does not exist.");
 	    return;
 	}
-	var pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+	pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
             createInstance(Components.interfaces.nsIFileInputStream);
-	var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+	cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
 	    createInstance(Components.interfaces.nsIConverterInputStream);
 	pipeout_stream.init(pipeout, -1, 0, 0);
 	cstream.init(pipeout_stream, "UTF-8", 0, 0);
-	var data = "";
-	var str = {};
+	data = "";
+	str = {};
 	cstream.readString(-1, str); // read the whole file and put it in str.value
 	data = str.value;
 	cstream.close();
@@ -374,24 +385,32 @@ Zotero.Lyz = {
     
     lyxPipeWrite: function(command){
 	// writing to lyxpipe.in
-	var pipein = Components.classes["@mozilla.org/file/local;1"]
+	var pipein;
+	var pipein_stream;
+	var msg;
+	
+	pipein = Components.classes["@mozilla.org/file/local;1"]
 	    .createInstance(Components.interfaces.nsILocalFile);
 	pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
 	if(!pipein.exists()){
 	    alert("Wrong path to Lyx server.\nSet the path specified in Lyx preferences.");
 	    return;
 	}
-	var pipein_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+	pipein_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIFileOutputStream);
 	pipein_stream.init(pipein, 0x02| 0x10, 0666, 0); // write, append
 	
-	var msg = "LYXCMD:lyz:"+command+"\n";
+	msg = "LYXCMD:lyz:"+command+"\n";
 	pipein_stream.write(msg, msg.length);
 	pipein_stream.close();
 	return true;
     },
     
     settings: function (){ 
+	var params;
+	var inn;
+	var out;
+	
     	var params = {inn:{citekey:this.prefs.getCharPref("citekey"),
     			   lyxserver:this.prefs.getCharPref("lyxserver")},
     		      out:null};       
@@ -412,6 +431,9 @@ Zotero.Lyz = {
 
 
     checkDocInDB: function(){
+	var doc;
+	var res;
+	
 	doc = this.lyxGetDoc();
 	if (!doc) return;
 	res = this.DB.query("SELECT bib FROM docs WHERE doc=\""+doc+"\"");
@@ -426,6 +448,12 @@ Zotero.Lyz = {
 	var doc = res[1];
 	var bib = res[0];
 	var bib_file;
+	var zitems;
+	var items;
+	var keys;
+	var entries_text;
+	var citekey;
+	var text;
 
 	if (!bib) {
 	    t = "Press OK to create new BibTeX database.\n";
@@ -442,18 +470,18 @@ Zotero.Lyz = {
 	    else return;
 	}
 	// export citation to Bibtex
-	var zitems = ZoteroPane.getSelectedItems();
+	zitems = ZoteroPane.getSelectedItems();
 	// FIXME: this should be called bellow, but it returns empty there (???)
 	if(!zitems.length){
 	    alert("Please select at least one citation.");
 	    return;
 	}
 	items = this.exportToBibtex(zitems);
+	keys = new Array();
 	for (var id in items){
-	    var entries_text = "";
-	    var keys = new Array();
-	    var citekey = items[id][0];
-	    var text = items[id][1];
+	    entries_text = "";
+	    citekey = items[id][0];
+	    text = items[id][1];
 
 	    keys.push(citekey);
 	    //check database, if not in, append to entries_text
@@ -473,15 +501,26 @@ Zotero.Lyz = {
 	var dic = new Array();
 	var ckre = /.*@[a-z]+\{([^,]+),{1}/;
 	var oldkey = ckre.exec(text)[1];
+	var creators;
+	var authors;
+	var author;
+	var c = "";
+	var chars = "";
+	var t;
+	var title;
+	var year;
+	var p;
+	var citekey = "";
+	var text;
 	
 	// NAME
 	ckre = /author\s?=\s?\{(.*)\},?\n/;
-	var creators = ckre.exec(text);
+	creators = ckre.exec(text);
 	if (!creators){
 	    ckre = /editor\s?=\s?\{(.*)\},?\n/;
 	    creators = ckre.exec(text);
 	}
-	var authors = creators[1];
+	authors = creators[1];
 	if (authors.split(" and ").length>1){
 	    author = authors.split(" and ")[0].split(" ");
 	    author = author[author.length-1].toLowerCase();
@@ -491,8 +530,7 @@ Zotero.Lyz = {
 	}	
 	// replace accented characters
 	ckre = /\{([a-zA-Z]{1})\}/;
-	var chars = author.split("");
-	var c = "";
+	chars = author.split("");
 	author = "";
 	for (var i=0;i<chars.length;i++){
 	    if (chars[i] in mappingTable){
@@ -507,11 +545,11 @@ Zotero.Lyz = {
 	// TITLE
 	ckre = /title = \{(.*)\},\n/;
 	
-	var t = ckre.exec(text)[1].toLowerCase();
+	t = ckre.exec(text)[1].toLowerCase();
 	t = t.replace(/[^a-z0-9\s]/g,"");
 	t = t.split(" ");
 	t.reverse();
-	var title = t.pop();
+	title = t.pop();
 	if (title<6){// the, a, on, about
 	    title += t.pop();
 	}
@@ -529,7 +567,6 @@ Zotero.Lyz = {
 	dic["year"] = year;
 	// custom cite key
 	p = this.prefs.getCharPref("citekey").split(" ");
-	citekey = "";
 	for (var i=0;i<p.length;i++){
 	    if (p[i] in dic) {citekey+=dic[p[i]];}
 	    else citekey+=p[i];
