@@ -412,7 +412,8 @@ Zotero.Lyz = {
 	var out;
 	
     	var params = {inn:{citekey:this.prefs.getCharPref("citekey"),
-    			   lyxserver:this.prefs.getCharPref("lyxserver")},
+    			   lyxserver:this.prefs.getCharPref("lyxserver"),
+			   format:this.prefs.getCharPref("format")},
     		      out:null};       
     	window.openDialog("chrome://lyz/content/settings.xul", "",
     			  "chrome, dialog, modal, centerscreen, resizable=yes", params);
@@ -421,6 +422,7 @@ Zotero.Lyz = {
     	    // User clicked ok. Process changed arguments; e.g. write them to disk or whatever
     	    this.prefs.setCharPref("citekey",params.out.citekey);
     	    this.prefs.setCharPref("lyxserver",params.out.lyxserver);
+	    this.prefs.setCharPref("format",params.out.format)
     	}	
     },
     
