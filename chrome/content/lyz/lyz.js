@@ -305,14 +305,9 @@ Zotero.Lyz = {
     
     prefs: null,
     DB: null,
+    replace: false,
     
-    observer: {
-	observe: function(subject, topic, data){
-	    //
-	}		
-    },
-    
-    createUI: function(document) {
+    createUI: function() {
 //	if ( document.getElementById("lyz-menu-button")) alert("GOOD");
 	var parentn = document.getElementById("zotero-items-pane").firstChild;
 	var lyzb = document.createElement("toolbarbutton");
@@ -320,7 +315,7 @@ Zotero.Lyz = {
 	var siblingn = document.getElementById("zotero-tb-advanced-search");
 	parentn.insertBefore(lyzb, siblingn);
 	parentn.insertBefore(document.createElement("toolbarseparator"),siblingn);	
-	document.loadOverlay("chrome://lyz/content/lyz-menu.xul", this.observer);
+	document.loadOverlay("chrome://lyz/content/lyz-menu.xul",null);
 
     },
     
@@ -448,13 +443,20 @@ Zotero.Lyz = {
     },
     
     checkAndCite: function(){
+	// export citation to Bibtex
+	var zitems = ZoteroPane.getSelectedItems();
+	// FIXME: this should be called bellow, but it returns empty there (???)
+	if(!zitems.length){
+	    alert("Please select at least one citation.");
+	    return;
+	}
+
 	// check document name
 	var res = this.checkDocInDB();
 	if(!res) {alert("checkAndCite"); return;}
 	var doc = res[1];
 	var bib = res[0];
 	var bib_file;
-	var zitems;
 	var items;
 	var keys;
 	var entries_text;
@@ -483,13 +485,6 @@ Zotero.Lyz = {
 	    if (bib_file) this.addNewDocument(doc,bib);
 	    else return;
 	}
-	// export citation to Bibtex
-	zitems = ZoteroPane.getSelectedItems();
-	// FIXME: this should be called bellow, but it returns empty there (???)
-	if(!zitems.length){
-	    alert("Please select at least one citation.");
-	    return;
-	}
 	items = this.exportToBibtex(zitems);
 	keys = new Array();
 	for (var id in items){
@@ -510,11 +505,18 @@ Zotero.Lyz = {
 	this.lyxPipeWrite("citation-insert:"+keys.join(","));
     },
     
-    createCiteKey: function(text){
-	//TODO: allow user to manually change the key
-	var dic = new Array();
+    createCiteKey: function(id,text){
 	var ckre = /.*@[a-z]+\{([^,]+),{1}/;
 	var oldkey = ckre.exec(text)[1];
+	var dic = new Array();
+	dic["zotero"] = id;
+	if (this.prefs.getCharPref("citekey") == "zotero"){
+	    var citekey = id;
+	    text = text.replace(oldkey,citekey);
+	    return [citekey,text];
+	    return;
+	}
+
 	var creators;
 	var authors;
 	var author;
@@ -613,14 +615,13 @@ Zotero.Lyz = {
 	    var id =Zotero.Items.getLibraryKeyHash(items[i]);
 	    translation.setItems([items[i]]);
 	    translation.translate();
-	    var ct = this.createCiteKey(text);
+	    var ct = this.createCiteKey(id,text);
 	    tmp[id] = [ct[0],ct[1]];
 	}
 	return tmp;
     },
 
-    updateBibtex: function(bib,entries_text, replace) {
-	var replace = replace || false;
+    updateBibtex: function(bib,entries_text) {
 	// write to bibtex file
 	var fbibtex = Components.classes["@mozilla.org/file/local;1"]
 	    .createInstance(Components.interfaces.nsILocalFile);
@@ -633,7 +634,7 @@ Zotero.Lyz = {
 	var fbibtex_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIFileOutputStream);
 
-	if (replace) fbibtex_stream.init(fbibtex, 0x02| 0x20, 0666, 0);// write , truncate
+	if (this.replace) fbibtex_stream.init(fbibtex, 0x02| 0x20, 0666, 0);// write , truncate
 	else fbibtex_stream.init(fbibtex, 0x02| 0x10, 0666, 0); // write, append
 
 	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
@@ -641,6 +642,7 @@ Zotero.Lyz = {
 	cstream.init(fbibtex_stream, "UTF-8", 0, 0);	
 	cstream.writeString(entries_text);
 	cstream.close();
+	this.replace = false;
     },
     
     updateBibtexAll: function(){
@@ -651,7 +653,7 @@ Zotero.Lyz = {
 	if (!bib) return;
 	var citekey = this.prefs.getCharPref("citekey");
 	var p = confirm("You are going to update BibTeX database:\n"+
-		      bib+"\nCurrent cite key format: \""+
+		      bib+"\nCurrent BibTex key format: \""+
 		      citekey+"\", will be used.\nDo you want to continue?");
 	if (p){
 	    // get all ids for the bibtex file
@@ -667,7 +669,8 @@ Zotero.Lyz = {
 	    for (var id in ex){
 		text+=ex[id][1];
 	    }
-	    this.updateBibtex(bib,text,true);
+	    this.replace = true;
+	    this.updateBibtex(bib,text);
 	    alert("Your BibTeX database "+bib+" has been updated.");
 	}
     },
@@ -705,10 +708,10 @@ Zotero.Lyz = {
 		file.initWithPath(fp.file.path+".bib");
 		file.create(file.NORMAL_FILE_TYPE,0666);
 		return file;
-	    } else if(!fp.file.exists()){
-		fp.file.create(file.NORMAL_FILE_TYPE,0666);
+	    } else {// overwrite the file if it exists
+		this.replace = true;
 		return fp.file;
-	    } else {return fp.file;}
+	    }
 	}
     }
 }

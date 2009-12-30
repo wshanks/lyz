@@ -21,7 +21,6 @@
       <menuseparator />
       <menuitem id="lyz-settings" label="&settings;"
       		oncommand="Zotero.Lyz.settings()"/>
-      
     </menupopup>
   </toolbarbutton>  
   <!-- context menu -->

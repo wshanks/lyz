@@ -1,12 +1,19 @@
 * TODO
-** not initialized when new window opened
-** incompatibility with zotfile
+** note about Update BIbtex
+** windows problem
+var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                     .getService(Components.interfaces.nsIWindowMediator);
+var win = wm.getMostRecentWindow("navigator:browser"); 
 ** Allow deletion from database
 ** store bibtex key format for each bibtex file
 * Requests
 ** update lyz from bibtex file 
 ** Notification about current doc and citekey
 ** Doc and bib in subversion
+* Would be nice
+** not initialized when new window opened
+** incompatibility with zotfile
+find out how to properly insert lyz menu into zotero menu
 
 * NOTES
 ** only one window
