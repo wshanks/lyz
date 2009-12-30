@@ -5,5 +5,5 @@ if (!Zotero.Lyz) {
     lyzLoader.loadSubScript("chrome://lyz/content/lyz.js");
     Zotero.Lyz.init();
 }
-window.addEventListener('load', function(e) { Zotero.Lyz.createUI(); }, false);
+window.addEventListener('load', function(e) { Zotero.Lyz.createUI(document); }, false);
 

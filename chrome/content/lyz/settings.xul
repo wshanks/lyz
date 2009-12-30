@@ -13,7 +13,10 @@
       <row align="center">
 	<label value="Lyx Server"/><textbox id="lyxserver"/>
       </row>
-      <row align="center"><label value="Cite Key"/><textbox id="citekey"/></row>
+      <row align="center">
+	<label value="Cite Key"/>
+	<textbox id="citekey"/>
+      </row>
     </rows>
   </grid>
 </dialog>

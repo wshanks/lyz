@@ -306,7 +306,13 @@ Zotero.Lyz = {
     prefs: null,
     DB: null,
     
-    createUI: function() {
+    observer: {
+	observe: function(subject, topic, data){
+	    //
+	}		
+    },
+    
+    createUI: function(document) {
 //	if ( document.getElementById("lyz-menu-button")) alert("GOOD");
 	var parentn = document.getElementById("zotero-items-pane").firstChild;
 	var lyzb = document.createElement("toolbarbutton");
@@ -314,7 +320,7 @@ Zotero.Lyz = {
 	var siblingn = document.getElementById("zotero-tb-advanced-search");
 	parentn.insertBefore(lyzb, siblingn);
 	parentn.insertBefore(document.createElement("toolbarseparator"),siblingn);	
-	document.loadOverlay("chrome://lyz/content/lyz-menu.xul", null);
+	document.loadOverlay("chrome://lyz/content/lyz-menu.xul", this.observer);
 
     },
     
@@ -412,8 +418,7 @@ Zotero.Lyz = {
 	var out;
 	
     	var params = {inn:{citekey:this.prefs.getCharPref("citekey"),
-    			   lyxserver:this.prefs.getCharPref("lyxserver"),
-			   format:this.prefs.getCharPref("format")},
+    			   lyxserver:this.prefs.getCharPref("lyxserver")},
     		      out:null};       
     	window.openDialog("chrome://lyz/content/settings.xul", "",
     			  "chrome, dialog, modal, centerscreen, resizable=yes", params);
@@ -422,7 +427,6 @@ Zotero.Lyz = {
     	    // User clicked ok. Process changed arguments; e.g. write them to disk or whatever
     	    this.prefs.setCharPref("citekey",params.out.citekey);
     	    this.prefs.setCharPref("lyxserver",params.out.lyxserver);
-	    this.prefs.setCharPref("format",params.out.format)
     	}	
     },
     
