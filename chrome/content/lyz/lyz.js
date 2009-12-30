@@ -308,18 +308,6 @@ Zotero.Lyz = {
     replace: false,
     wm: null,
     
-//     createUI: function() {
-// //	if ( document.getElementById("lyz-menu-button")) alert("GOOD");
-// 	var parentn = document.getElementById("zotero-items-pane").firstChild;
-// 	var lyzb = document.createElement("toolbarbutton");
-// 	lyzb.setAttribute("id", "lyz-menu-button");
-// 	var siblingn = document.getElementById("zotero-tb-advanced-search");
-// 	parentn.insertBefore(lyzb, siblingn);
-// 	parentn.insertBefore(document.createElement("toolbarseparator"),siblingn);	
-// 	document.loadOverlay("chrome://lyz/content/lyz-menu.xul",null);
-
-//     },
-    
     init: function () {
 	this.DB = new Zotero.DBConnection("lyz");
 	var sql;
