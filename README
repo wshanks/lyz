@@ -1,10 +1,10 @@
 * TODO
-** note about Update BIbtex
+** Allow deletion from database
+** change bibtex key format - update document
 ** windows problem
 var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                      .getService(Components.interfaces.nsIWindowMediator);
 var win = wm.getMostRecentWindow("navigator:browser"); 
-** Allow deletion from database
 ** store bibtex key format for each bibtex file
 * Requests
 ** update lyz from bibtex file 

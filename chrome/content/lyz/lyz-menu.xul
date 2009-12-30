@@ -10,7 +10,7 @@
 		  src="chrome://lyz/locale/lyz.properties"/>
   </stringbundleset>
   
-  <toolbarbutton id="lyz-menu-button" tooltiptext="LyZ" type="menu" insertafter="zotero-tb-advanced-search">
+  <toolbarbutton id="lyz-menu-button" tooltiptext="LyZ" type="menu" insertbefore="zotero-tb-advanced-search">
     <menupopup id="lyz-menupopup">
       <menuitem id="lyz-send" 
 		label="&cite;" 
