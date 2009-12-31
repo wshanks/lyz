@@ -426,31 +426,47 @@ Zotero.Lyz = {
     },
 
     checkBibtexFile: function(){
-	pipeout = Components.classes["@mozilla.org/file/local;1"]
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var res = this.checkDocInDB();
+	var doc = res[1];
+	var bib = res[0];
+	if (!bib) {
+	    win.alert("There is no BibTeX database associated with the active LyX document: "+doc);
+	    return;
+	}
+	var bibfile = Components.classes["@mozilla.org/file/local;1"]
 	    .createInstance(Components.interfaces.nsILocalFile);
-	path = this.prefs.getCharPref("lyxserver");
-	pipeout.initWithPath(path+".out");
-	if(!pipeout.exists()){
+	bibfile.initWithPath(bib);
+	if(!bibfile.exists()){
 	    win.alert("The specified LyXServer pipe does not exist.");
 	    return;
 	}
-	pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+	var bibfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
             createInstance(Components.interfaces.nsIFileInputStream);
-	cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+	var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
 	    createInstance(Components.interfaces.nsIConverterInputStream);
-	pipeout_stream.init(pipeout, -1, 0, 0);
-	cstream.init(pipeout_stream, "UTF-8", 0, 0);
-	data = "";
-	str = {};
+	bibfile_stream.init(bibfile, -1, 0, 0);
+	cstream.init(bibfile_stream, "UTF-8", 0, 0);
+	var text = "";
+	var str = {};
 	cstream.readString(-1, str); // read the whole file and put it in str.value
-	data = str.value;
+	text = str.value;
 	cstream.close();
 	var ck = /.*@[a-z]+\{([^,]+),{1}/;
 	var ar = text.split(ck);
+	var info = "";
 	for (var i=1;i<ar.length;i+=2){
-	    alert(ar[i]);
+	    var zid = ar[i];
+	    var res = this.DB.query("SELECT * FROM keys WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
+	    if(!res){
+		info+=zid+": "+this.exportToBibliography(this.getZoteroItem(zid))+"\n";
+		this.DB.query("INSERT INTO keys VALUES(null,\""+zid+"\",\""+bib+"\",\""+zid+"\")");
+	    }
 	}
 	
+	if (!info=="")
+	    win.alert("The following items where added:\n"+info);
+	else win.alert("No items added.");
     },
     
     checkDocInDB: function(){
