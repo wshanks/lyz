@@ -341,7 +341,6 @@ Zotero.Lyz = {
 	fre = /.*server-get-filename:(.*)\n$/;
 	fname = fre.exec(res);
 	if (fname==null) {win.alert("ERROR: lyxGetDoc: "+res);}
-	
 	return fname[1];
     },
     
@@ -475,10 +474,11 @@ Zotero.Lyz = {
     
     checkDocInDB: function(){
 	var doc;
-	var res;
-	
+	var res;	
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	doc = this.lyxGetDoc();
-	if (!doc) return;
+	if (!doc) {win.alert("Could not retrieve document name."); return;}
+
 	res = this.DB.query("SELECT bib FROM docs WHERE doc=\""+doc+"\"");
 	if (!res) return [res,doc];
 	return [res[0]['bib'],doc];
@@ -662,32 +662,46 @@ Zotero.Lyz = {
 	return tmp;
     },
     
-    dbDeleteBib: function(bib){
+    dbDeleteBib: function(){
 	//
 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
-	
-	var res = win.confirm("You are about to delete BibTeX database:\n"+
-			      bib+"Record about associated documents will also be deleted.");
+	var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
+	var params = {inn:{items:dic,type:"bib"},
+    		      out:null};       
+    	var res = win.openDialog("chrome://lyz/content/delete.xul", "",
+    		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
+	if(!res) return;
+	var bib;
+    	if (params.out) {
+	    bib = params.out.item;
+    	}	
+	var res = win.confirm("You are about to delete record of BibTeX database:\n"+
+			      bib+"\nRecord about associated documents will also be deleted.\n",
+			      "Deleting LyZ database record");
 	if(!res) return;
 	this.DB.query("DELETE FROM docs WHERE bib=\""+bib+"\"");
 	this.DB.query("DELETE FROM keys WHERE bib=\""+bib+"\"");
-	//delete bib file
     },
     
     dbDeleteDoc: function(doc,bib){
 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
-	var res = win.confirm("You are about to delete document: "+bib);
+	var dic = this.DB.query("SELECT doc FROM docs");
+	var params = {inn:{items:dic,type:"doc"},
+    		      out:null};       
+    	win.openDialog("chrome://lyz/content/delete.xul", "",
+    		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
+	var doc;
+    	if (params.out) {
+	    doc = params.out.item;
+    	}	
+	var res = win.confirm("Do you really want to delete document:\n"+
+			      doc+"?","Deleting LyZ database record");
 	if(!res) return;
 	this.DB.query("DELETE FROM docs WHERE doc=\""+doc+"\"");
-	var res = win.confirm("Document deleted. Do you also want to delete associated BibTeX database:\n"
-			      +bib);
-	if(!res) return;
-	this.DB.query("DELETE FROM keys WHERE bib=\""+bib+"\"");
     },
     
-    dbDeleteKey: function(zid,bib){
-	
-    },
+    // dbDeleteKey: function(zid,bib){
+    // },
     
     changeBibtexKeyFormat: function(doc){
 	//use current key
@@ -719,12 +733,12 @@ Zotero.Lyz = {
     },
     
     updateBibtexAll: function(){
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	var res = this.checkDocInDB();
 	var doc = res[1];
 	var bib = res[0];
 	if (!bib) {alert("There is no BibTeX database associated with the active LyX document: "+doc);return;};
 	var citekey = this.prefs.getCharPref("citekey");
-	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 
 	var p = win.confirm("You are going to update BibTeX database:\n"+
 		      bib+"\nCurrent BibTex key format: \""+

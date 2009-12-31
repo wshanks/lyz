@@ -25,6 +25,10 @@
 	      <menuseparator />
 	      <menuitem id="lyz-settings" label="&settings;"
 			oncommand="Zotero.Lyz.settings()"/>
+	      <menuitem id="lyz-delete-bib" label="&delete-bib;"
+			oncommand="Zotero.Lyz.dbDeleteBib()"/>
+	      <menuitem id="lyz-delete-doc" label="&delete-doc;"
+			oncommand="Zotero.Lyz.dbDeleteDoc()"/>
 	    </menupopup>
 	  </toolbarbutton>  
 	</hbox>
