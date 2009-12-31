@@ -301,6 +301,7 @@ var mappingTable = {
     "\u1EF9":"\\~{y}" // LATIN SMALL LETTER Y WITH TILDE
 
 }
+
 Zotero.Lyz = {
     
     prefs: null,
@@ -424,53 +425,6 @@ Zotero.Lyz = {
 	this.DB.query("INSERT INTO docs (doc,bib) VALUES(\""+doc+"\",\""+bib+"\")");
     },
 
-    checkBibtexFile: function(){
-	var win = this.wm.getMostRecentWindow("navigator:browser"); 
-	var res = this.checkDocInDB();
-	var doc = res[1];
-	var bib = res[0];
-	if (!this.prefs.getCharPref("citekey")=="zotero") {
-	    win.alert("Update from BibTeX is only functional if you use 'zotero' format for BibTeX key.");
-	    return;
-	}
-	if (!bib) {
-	    win.alert("There is no BibTeX database associated with the active LyX document: "+doc);
-	    return;
-	}
-	var bibfile = Components.classes["@mozilla.org/file/local;1"]
-	    .createInstance(Components.interfaces.nsILocalFile);
-	bibfile.initWithPath(bib);
-	if(!bibfile.exists()){
-	    win.alert("The specified LyXServer pipe does not exist.");
-	    return;
-	}
-	var bibfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
-            createInstance(Components.interfaces.nsIFileInputStream);
-	var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
-	    createInstance(Components.interfaces.nsIConverterInputStream);
-	bibfile_stream.init(bibfile, -1, 0, 0);
-	cstream.init(bibfile_stream, "UTF-8", 0, 0);
-	var text = "";
-	var str = {};
-	cstream.readString(-1, str); // read the whole file and put it in str.value
-	text = str.value;
-	cstream.close();
-	var ck = /.*@[a-z]+\{([^,]+),{1}/;
-	var ar = text.split(ck);
-	var info = "";
-	for (var i=1;i<ar.length;i+=2){
-	    var zid = ar[i];
-	    var res = this.DB.query("SELECT * FROM keys WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
-	    if(!res){
-		info+=zid+": "+this.exportToBibliography(this.getZoteroItem(zid))+"\n";
-		this.DB.query("INSERT INTO keys VALUES(null,\""+zid+"\",\""+bib+"\",\""+zid+"\")");
-	    }
-	}
-	
-	if (!info=="")
-	    win.alert("The following items where added:\n"+info);
-	else win.alert("No items added.");
-    },
     
     checkDocInDB: function(){
 	var doc;
@@ -668,7 +622,7 @@ Zotero.Lyz = {
 	var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
 	var params = {inn:{items:dic,type:"bib"},
     		      out:null};       
-    	var res = win.openDialog("chrome://lyz/content/delete.xul", "",
+    	var res = win.openDialog("chrome://lyz/content/select.xul", "",
     		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
 	if(!res) return;
 	var bib;
@@ -688,7 +642,7 @@ Zotero.Lyz = {
 	var dic = this.DB.query("SELECT doc FROM docs");
 	var params = {inn:{items:dic,type:"doc"},
     		      out:null};       
-    	win.openDialog("chrome://lyz/content/delete.xul", "",
+    	win.openDialog("chrome://lyz/content/select.xul", "",
     		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
 	var doc;
     	if (params.out) {
@@ -699,19 +653,41 @@ Zotero.Lyz = {
 	if(!res) return;
 	this.DB.query("DELETE FROM docs WHERE doc=\""+doc+"\"");
     },
-    
-    // dbDeleteKey: function(zid,bib){
-    // },
-    
-    changeBibtexKeyFormat: function(doc){
-	//use current key
-	//old bibtex keys
-	//LyX document replace oldkeys with current format
-	//update bibtex file
+
+    syncBibtexKeyFormat: function(doc,oldkeys,newkeys){
+    	var win = this.wm.getMostRecentWindow("navigator:browser");
+	
+    	var keymap = new Array();
+    	var data = this.DB.query("SELECT id,key,zid FROM keys WHERE bib=\""+bib+"\"");
+    	for (var i=0;i<data.length;i++){
+	
+    	}
+    	//use current key
+    	//old bibtex keys
+    	//LyX document replace oldkeys with current format
+	
+    	var bibfile = Components.classes["@mozilla.org/file/local;1"]
+    	    .createInstance(Components.interfaces.nsILocalFile);
+    	bibfile.initWithPath(bib);
+    	if(!bibfile.exists()){
+    	    win.alert("The specified LyXServer pipe does not exist.");
+    	    return;
+    	}
+    	var bibfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+            createInstance(Components.interfaces.nsIFileInputStream);
+    		is.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
+
+    	if (is instanceof Components.interfaces.nsIUnicharLineInputStream) {
+    	    var line = {};
+    	    var cont;
+    	    // read first line
+    	    cont = is.readLine(line);
+    	    line.value
+    	//update bibtex file
+    	}
     },
     
-    updateBibtex: function(bib,entries_text) {
-	// write to bibtex file
+    updateBibtex: function(bib,entries_text,zids) {
 	var fbibtex = Components.classes["@mozilla.org/file/local;1"]
 	    .createInstance(Components.interfaces.nsILocalFile);
 	fbibtex.initWithPath(bib);
@@ -727,12 +703,16 @@ Zotero.Lyz = {
 	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIConverterOutputStream);
 	cstream.init(fbibtex_stream, "UTF-8", 0, 0);	
-	cstream.writeString(entries_text);
+	cstream.writeString(zids.join(" ")+"\n"+entries_text);
 	cstream.close();
 	
     },
     
     updateBibtexAll: function(){
+	//first update from the bibtex file
+	this.updateFromBibtexFile();
+	
+	// update when zotero items are modified
 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	var res = this.checkDocInDB();
 	var doc = res[1];
@@ -741,26 +721,90 @@ Zotero.Lyz = {
 	var citekey = this.prefs.getCharPref("citekey");
 
 	var p = win.confirm("You are going to update BibTeX database:\n"+
-		      bib+"\nCurrent BibTex key format: \""+
-		      citekey+"\", will be used.\nDo you want to continue?");
+		      bib+"\nCurrent BibTex key format \""+
+		      citekey+"\" will be used.\nDo you want to continue?");
 	if (p){
 	    // get all ids for the bibtex file
-	    var ids_h = this.DB.query("SELECT zid FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
+	    var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
 	    var ids = new Array();
+	    var oldkeys = new Array();
 	    for (var i=0;i<ids_h.length;i++){
-		var key = ids_h[i]['zid'];
-		ids.push(this.getZoteroItem(key));
+		var zid = ids_h[i]['zid'];
+		ids.push(this.getZoteroItem(zid));
+		oldkeys[zid] = ids_h[i]['key'];
 	    }
 	    
 	    var ex = this.exportToBibtex(ids);
+	    var zids = new Array();
+	    var newkeys = new Array();
 	    var text = "";
 	    for (var id in ex){
 		text+=ex[id][1];
+		zids.push(id);
+		newkeys[id] = ex[id][0];
 	    }
 	    this.replace = true;
-	    this.updateBibtex(bib,text);
-	    win.alert("Your BibTeX database "+bib+" has been updated.");
+	    this.updateBibtex(bib,text,zids);
+	    // no need to bother user who sticks to safe cite key
+	    if (this.prefs.getCharPref("citekey") == "zotero") {
+		win.alert("Your BibTeX database "+bib+" has been updated.");
+		return;
+	    }
+	    
+	    var res = win.confirm("Your BibTeX database "+bib+" has been updated.\n"+
+				  "Do you also want to update the LyX document?\n"+
+				  "This is only necessary when any author, title or year has been modified.\n\n"+
+				  "You must close the LyX document before you proceed!");
+	    if (!res) return;
+	    this.syncBibtexKeyFormat(doc,oldkeys,newkeys);
 	}
+    },
+    
+    updateFromBibtexFile: function(){
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var res = this.checkDocInDB();
+	var doc = res[1];
+	var bib = res[0];
+	if (!this.prefs.getCharPref("citekey")=="zotero") {
+	    win.alert("Update from BibTeX is only functional if you use 'zotero' format for BibTeX key.");
+	    return;
+	}
+	if (!bib) {
+	    win.alert("There is no BibTeX database associated with the active LyX document: "+doc);
+	    return;
+	}
+	var bibfile = Components.classes["@mozilla.org/file/local;1"]
+	    .createInstance(Components.interfaces.nsILocalFile);
+	bibfile.initWithPath(bib);
+	if(!bibfile.exists()){
+	    win.alert("The specified LyXServer pipe does not exist.");
+	    return;
+	}
+	var bibfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+            createInstance(Components.interfaces.nsIFileInputStream);
+	var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+	    createInstance(Components.interfaces.nsIConverterInputStream);
+	bibfile_stream.init(bibfile, -1, 0, 0);
+	cstream.init(bibfile_stream, "UTF-8", 0, 0);
+	var text = "";
+	var str = {};
+	cstream.readString(-1, str); // read the whole file and put it in str.value
+	text = str.value;
+	cstream.close();
+	var ck = /.*@[a-z]+\{([^,]+),{1}/;
+	var ar = text.split(ck);
+	var info = "";
+	for (var i=1;i<ar.length;i+=2){
+	    var zid = ar[i];
+	    var res = this.DB.query("SELECT * FROM keys WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
+	    if(!res){
+		info+=zid+": "+this.exportToBibliography(this.getZoteroItem(zid))+"\n";
+		this.DB.query("INSERT INTO keys VALUES(null,\""+zid+"\",\""+bib+"\",\""+zid+"\")");
+	    }
+	}
+	
+	if (!info=="") win.alert("The following items where added:\n"+info);
+	
     },
     
     getZoteroItem: function(key){
