@@ -16,21 +16,8 @@ var win = wm.getMostRecentWindow("navigator:browser");
 find out how to properly insert lyz menu into zotero menu
 
 * NOTES
-** only one window
-The problem is that you're keeping central state (which most Firefox
-extensions don't do, but you're piggybacking on Zotero's core object)
-but trying to do window-specific things. If you're storing things in a
-core object, you need to pass the relevant window/document to the
-functions. So pass document to createUI() and pass window to settings()
-(and do the same for anything else that needs a window) and change the
-methods to take those parameters, and then it should work. 
-
-** svn management
-1) We use a group library for the reference and the key format would be the same for all authors. Currently we just export the entire library as a bibtex file whenever a change is made and replace the existing file. With this new plugin I see two scenarios that can result in duplicates. (I assume that you know how subversion works.)
-
-a) Two people edit the document at the same time and add the same citation. In this case subversion either detects that the bibtex files are identical and just uses one of these. If the authors also add other citations so that the bibtex files are no longer identical, this would create a conflict. So no problem here.
-
-b) One person adds a citation and commits the bibtex file. A second person updates his working copy and now has a bibtex file containing the said reference. When he now cites this reference, it is added to the bibtex file again. This is a problem that can be solved only by your plugin.
+** Internal LyX implementation
+python server, LyX client, Zotero plugin client
 
 * ZOTERO
 ** disable search for string shorter than 2?

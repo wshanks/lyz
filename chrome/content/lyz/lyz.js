@@ -430,6 +430,10 @@ Zotero.Lyz = {
 	var res = this.checkDocInDB();
 	var doc = res[1];
 	var bib = res[0];
+	if (!this.prefs.getCharPref("citekey")=="zotero") {
+	    win.alert("Update from BibTeX is only functional if you use 'zotero' format for BibTeX key.");
+	    return;
+	}
 	if (!bib) {
 	    win.alert("There is no BibTeX database associated with the active LyX document: "+doc);
 	    return;
@@ -659,11 +663,26 @@ Zotero.Lyz = {
     },
     
     dbDeleteBib: function(bib){
+	//
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	
+	var res = win.confirm("You are about to delete BibTeX database:\n"+
+			      bib+"Record about associated documents will also be deleted.");
+	if(!res) return;
+	this.DB.query("DELETE FROM docs WHERE bib=\""+bib+"\"");
+	this.DB.query("DELETE FROM keys WHERE bib=\""+bib+"\"");
+	//delete bib file
     },
     
-    dbDeleteDoc: function(doc){
-	
+    dbDeleteDoc: function(doc,bib){
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var res = win.confirm("You are about to delete document: "+bib);
+	if(!res) return;
+	this.DB.query("DELETE FROM docs WHERE doc=\""+doc+"\"");
+	var res = win.confirm("Document deleted. Do you also want to delete associated BibTeX database:\n"
+			      +bib);
+	if(!res) return;
+	this.DB.query("DELETE FROM keys WHERE bib=\""+bib+"\"");
     },
     
     dbDeleteKey: function(zid,bib){
@@ -672,6 +691,9 @@ Zotero.Lyz = {
     
     changeBibtexKeyFormat: function(doc){
 	//use current key
+	//old bibtex keys
+	//LyX document replace oldkeys with current format
+	//update bibtex file
     },
     
     updateBibtex: function(bib,entries_text) {
