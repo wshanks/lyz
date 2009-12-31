@@ -19,6 +19,9 @@
 	      <menuitem id="lyz-update-bibtex" 
 			label="&update-bibtex;"
 			oncommand="Zotero.Lyz.updateBibtexAll()"/>
+	      <menuitem id="lyz-check-bibtex" 
+			label="&check-bibtex;"
+			oncommand="Zotero.Lyz.checkBibtexFile()"/>
 	      <menuseparator />
 	      <menuitem id="lyz-settings" label="&settings;"
 			oncommand="Zotero.Lyz.settings()"/>

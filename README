@@ -1,3 +1,15 @@
+* LETENKA
+7 041,42 CZK,2926 HKD, EVA AIRWAYS CORPORATION, HONG KONG, HK
+PK: 472943XXXXXXX163
+8323533/5500
+21.12.2009
+17:33
+-390,78 USD
+2-25019599 
+Ticket Number     : 6952409347268
+Booking Reference : CMCLFA
+
+
 * TODO
 ** Allow deletion from database
 ** change bibtex key format - update document
@@ -43,3 +55,4 @@ b) One person adds a citation and commits the bibtex file. A second person updat
 •browser.dom.window.dump.enabled
 
 ircs://irc.mozilla.org:6697/extdev
+

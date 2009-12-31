@@ -425,7 +425,34 @@ Zotero.Lyz = {
 	this.DB.query("INSERT INTO docs (doc,bib) VALUES(\""+doc+"\",\""+bib+"\")");
     },
 
-
+    checkBibtexFile: function(){
+	pipeout = Components.classes["@mozilla.org/file/local;1"]
+	    .createInstance(Components.interfaces.nsILocalFile);
+	path = this.prefs.getCharPref("lyxserver");
+	pipeout.initWithPath(path+".out");
+	if(!pipeout.exists()){
+	    win.alert("The specified LyXServer pipe does not exist.");
+	    return;
+	}
+	pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+            createInstance(Components.interfaces.nsIFileInputStream);
+	cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+	    createInstance(Components.interfaces.nsIConverterInputStream);
+	pipeout_stream.init(pipeout, -1, 0, 0);
+	cstream.init(pipeout_stream, "UTF-8", 0, 0);
+	data = "";
+	str = {};
+	cstream.readString(-1, str); // read the whole file and put it in str.value
+	data = str.value;
+	cstream.close();
+	var ck = /.*@[a-z]+\{([^,]+),{1}/;
+	var ar = text.split(ck);
+	for (var i=1;i<ar.length;i+=2){
+	    alert(ar[i]);
+	}
+	
+    },
+    
     checkDocInDB: function(){
 	var doc;
 	var res;
@@ -614,8 +641,9 @@ Zotero.Lyz = {
 	}
 	return tmp;
     },
-
+    
     dbDeleteBib: function(bib){
+	
     },
     
     dbDeleteDoc: function(doc){
@@ -656,7 +684,7 @@ Zotero.Lyz = {
 	var res = this.checkDocInDB();
 	var doc = res[1];
 	var bib = res[0];
-	if (!bib) return;
+	if (!bib) {alert("There is no BibTeX database associated with the active LyX document: "+doc);return;};
 	var citekey = this.prefs.getCharPref("citekey");
 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 
