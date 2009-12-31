@@ -11,24 +11,26 @@
 	</stringbundleset>
 	<hbox class="toolbar"  id="zotero-items-toolbar" align="center">
 	  <toolbarbutton id="lyz-menu-button" tooltiptext="LyZ" type="menu" 
-			 insertafter="zotero-tb-advanced-search">
+			 insertafter="zotero-tb-attachment-add">
 	    <menupopup id="lyz-menupopup">
 	      <menuitem id="lyz-send" 
 			label="&cite;" 
-			oncommand="Zotero.Lyz.checkAndCite()"/>
+			oncommand="Zotero.Lyz.checkAndCite()"
+			tooltip="Send citation to LyX"/>
 	      <menuitem id="lyz-update-bibtex" 
 			label="&update-bibtex;"
-			oncommand="Zotero.Lyz.updateBibtexAll()"/>
-	      <menuitem id="lyz-check-bibtex" 
-			label="&check-bibtex;"
-			oncommand="Zotero.Lyz.checkBibtexFile()"/>
+			oncommand="Zotero.Lyz.updateBibtexAll()"
+			tooltip="Update modified items in BibTeX file"/>
+	      <menuseparator />
+	      <menuitem id="lyz-delete-bib" label="&delete-bib;"
+			oncommand="Zotero.Lyz.dbDeleteBib()"
+			tooltip="Delete BibTeX database and associated documet records from LyZ database"/>
+	      <menuitem id="lyz-delete-doc" label="&delete-doc;"
+			oncommand="Zotero.Lyz.dbDeleteDoc()"
+			tooltip="Delete document record from LyZ database"/>
 	      <menuseparator />
 	      <menuitem id="lyz-settings" label="&settings;"
 			oncommand="Zotero.Lyz.settings()"/>
-	      <menuitem id="lyz-delete-bib" label="&delete-bib;"
-			oncommand="Zotero.Lyz.dbDeleteBib()"/>
-	      <menuitem id="lyz-delete-doc" label="&delete-doc;"
-			oncommand="Zotero.Lyz.dbDeleteDoc()"/>
 	    </menupopup>
 	  </toolbarbutton>  
 	</hbox>
