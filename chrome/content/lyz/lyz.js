@@ -589,7 +589,7 @@ Zotero.Lyz = {
 	citekey = citekey.replace("{","");
 	citekey = citekey.replace("}","");
 	//check if cite key exists
-	var res = this.DB.query("SELECT key FROM keys WHERE key=\""+key+"\"");
+	var res = this.DB.query("SELECT key FROM keys WHERE key=\""+citekey+"\"");
 	if (res.length>1) citekey+=(res.length+1);
 	text = text.replace(oldkey,citekey);
 	return [citekey,text];
@@ -675,7 +675,7 @@ Zotero.Lyz = {
 	    doc = params.out.item;
     	}	
 	newfname = this.dialog_FilePickerOpen(win,"Select LyX document for "+doc,"LyX", "*.lyx").path;
-	if(!newname) return;
+	if(!newfname) return;
 	this.DB.query("UPDATE docs SET doc=\""+newfname+"\" WHERE id=\""+id+"\"");
 	
     },
