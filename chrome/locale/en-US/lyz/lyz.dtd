@@ -4,4 +4,6 @@
 <!ENTITY update-bibtex "Update BibTeX">
 <!ENTITY check-bibtex "Update from BibTeX">
 <!ENTITY delete-bib "Delete BibTeX record...">
-<!ENTITY delete-doc "Delete document record...">
+<!ENTITY delete-doc "Delete LyX document record...">
+<!ENTITY rename-bib "Rename BibTeX record...">
+<!ENTITY rename-doc "Rename LyX document record...">

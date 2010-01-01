@@ -1,11 +1,11 @@
 * TODO
-** Allow deletion from database
-** change bibtex key format - update document
-** windows problem
-var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                     .getService(Components.interfaces.nsIWindowMediator);
-var win = wm.getMostRecentWindow("navigator:browser"); 
-** store bibtex key format for each bibtex file
+  
+* NEW
+** rename doc and bib
+** sync LyZ/Bibtex/LyX
+
+* TEST CASE
+ 1. 
 * Requests
 ** update lyz from bibtex file 
 ** Notification about current doc and citekey

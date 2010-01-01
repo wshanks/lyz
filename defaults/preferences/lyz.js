@@ -1,3 +1,3 @@
 pref("extensions.lyz.lyxserver", "\\\\.\\pipe\\lyxpipe");
-pref("extensions.lyz.citekey", "zotero");
+pref("extensions.lyz.citekey", "author year title");
 

@@ -29,6 +29,11 @@
 			oncommand="Zotero.Lyz.dbDeleteDoc()"
 			tooltip="Delete document record from LyZ database"/>
 	      <menuseparator />
+	      <menuitem id="lyz-rename-bib" label="&rename-bib;"
+			oncommand="Zotero.Lyz.dbRenameBib()"/>
+	      <menuitem id="lyz-rename-doc" label="&rename-doc;"
+			oncommand="Zotero.Lyz.dbRenameDoc()"/>
+	      <menuseparator />
 	      <menuitem id="lyz-settings" label="&settings;"
 			oncommand="Zotero.Lyz.settings()"/>
 	    </menupopup>
