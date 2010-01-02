@@ -482,7 +482,7 @@ Zotero.Lyz = {
 
 	    bib = bib_file.path;
 	    if (bib_file) this.addNewDocument(doc,bib);
-	    else return;
+	    else return;//file dialog canceled
 	}
 	items = this.exportToBibtex(zitems);
 	var keys = new Array();
@@ -808,7 +808,7 @@ Zotero.Lyz = {
 	cstream.init(fbibtex_stream, "UTF-8", 0, 0);	
 	
 	if (!this.replace){//append new entries
-	    cstream.writeString(firstline+"\n"+text+entries_text);
+	    cstream.writeString(firstline+"\n"+text+"\n"+entries_text);
 	} else cstream.writeString(zids.join(" ")+"\n"+entries_text);
 	cstream.close();
 	this.replace = false;
