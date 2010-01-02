@@ -699,6 +699,36 @@ Zotero.Lyz = {
     },
     
     syncBibtexKeyFormat: function(doc,oldkeys,newkeys){
+	/* TODO: change to line by line
+	   file = Components.classes["@mozilla.org/file/local;1"]
+	   .createInstance(Components.interfaces.nsILocalFile);
+	   file.initWithPath("d:\\test.lyx");
+	   var istream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+           createInstance(Components.interfaces.nsIFileInputStream);
+	   istream.init(file, 0x01, 0444, 0);
+	   var is = Components.classes["@mozilla.org/intl/converter-input-stream;1"]
+           .createInstance(Components.interfaces.nsIConverterInputStream);
+	   is.init(istream, "UTF-8", 1024, 0xFFFD);
+	   
+	   is.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
+	   
+	   // read lines into array
+	   
+	   
+	   var line = {}, lines = [], hasmore;
+	   do {
+	   hasmore = is.readLine(line);
+	   if (line.value.search('key')==0){
+	   res = prompt("Stop?",line.value);  
+	   if (!res) break;
+	   }
+	   //lines.push(line.value); 
+	   
+	   
+	   } while(hasmore);
+	   
+	   is.close();
+	*/
     	var win = this.wm.getMostRecentWindow("navigator:browser");
 	this.lyxPipeWrite("buffer-write");
 	this.lyxPipeWrite("buffer-close");	    
