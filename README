@@ -1,4 +1,7 @@
 * TODO
+** cite keys more configurable, e.g. author:09:conference
+e.g. 'author year,2 venue' comma to split
+** Bibtex updated only on changes, make diff
   
 * NEW
 ** rename doc and bib

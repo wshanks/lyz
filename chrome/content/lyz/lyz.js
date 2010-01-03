@@ -798,37 +798,6 @@ Zotero.Lyz = {
     
     writeBib: function(bib,entries_text,zids) {
 	var win = this.wm.getMostRecentWindow("navigator:browser");
-	//FIXME: can't get nsIUnicharLineInputStream.readLine to work...
-		/* TODO: change to line by line
-	   file = Components.classes["@mozilla.org/file/local;1"]
-	   .createInstance(Components.interfaces.nsILocalFile);
-	   file.initWithPath("d:\\test.lyx");
-	   var istream = Components.classes["@mozilla.org/network/file-input-stream;1"].
-           createInstance(Components.interfaces.nsIFileInputStream);
-	   istream.init(file, 0x01, 0444, 0);
-	   var is = Components.classes["@mozilla.org/intl/converter-input-stream;1"]
-           .createInstance(Components.interfaces.nsIConverterInputStream);
-	   is.init(istream, "UTF-8", 1024, 0xFFFD);
-	   
-	   is.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
-	   
-	   // read lines into array
-	   
-	   
-	   var line = {}, lines = [], hasmore;
-	   do {
-	   hasmore = is.readLine(line);
-	   if (line.value.search('key')==0){
-	   res = prompt("Stop?",line.value);  
-	   if (!res) break;
-	   }
-	   //lines.push(line.value); 
-	   
-	   
-	   } while(hasmore);
-	   
-	   is.close();
-	*/
 	if (!this.replace){//will append to the file
 	    var bib_backup = this.fileBackup(bib);
 	    if (!bib_backup) {alert("Backup failed."); return;}
@@ -844,14 +813,6 @@ Zotero.Lyz = {
 	    outstream.writeString(entries_text);
 	    cstream.close();
 	    return;
-	    // var text = "";
-	    // var str = {};
-	    // cstream.readString(-1, str); // read the whole file and put it in str.value
-	    // text = str.value;
-	    // cstream.close();
-	    // text = text.split("\n");
-	    // var firstline = text.splice(0,1)+" "+zids.join(" ");
-	    // text = text.join("\n");
 	}
 	
 	// now write new bibtex file
@@ -861,12 +822,7 @@ Zotero.Lyz = {
 	var fbibtex_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIFileOutputStream);
 
-	// if (this.append) {
-	//     this.append = false;
 	fbibtex_stream.init(fbibtex, 0x02| 0x20, 0666, 0);// write , truncate
-	// }
-	// else fbibtex_stream.init(fbibtex, 0x02| 0x10, 0666, 0); // write, append
-	
 	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIConverterOutputStream);
 	cstream.init(fbibtex_stream, "UTF-8", 0, 0);	
