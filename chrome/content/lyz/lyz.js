@@ -762,9 +762,13 @@ Zotero.Lyz = {
 	try {
     	    var lyxfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
 		createInstance(Components.interfaces.nsIFileInputStream);
+	    lyxfile_stream.init(lyxfile, -1, 0, 0);
+	    
 	    var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
 		createInstance(Components.interfaces.nsIConverterInputStream);
-	    lyxfile_stream.init(lyxfile, -1, 0, 0);
+	    // cstream.init(lyxfile_stream, "UTF-8", 1024, 0xFFFD);
+	    // cstream.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
+	    
 	    cstream.init(lyxfile_stream, "UTF-8", 0, 0);
 	    var text = "";
 	    var str = {};
@@ -838,7 +842,11 @@ Zotero.Lyz = {
 	cstream.init(fbibtex_stream, "UTF-8", 0, 0);	
 	
 	if (!this.replace){//append new entries
-	    cstream.writeString(firstline+"\n"+text+"\n"+entries_text);
+	    //cstream.writeString(firstline+"\n"+text+"\n"+entries_text);
+	    cstream.writeString(firstline+"\n");
+	    cstream.writeString(text+"\n");
+	    cstream.writeString(entries_text);
+	    
 	} else cstream.writeString(zids.join(" ")+"\n"+entries_text);
 	cstream.close();
 	this.replace = false;
@@ -989,6 +997,14 @@ Zotero.Lyz = {
 	    this.replace = true;
 	    return fp.file;
 	}
+    },
+    
+    test: function(){
+	var t = prompt("Command","buffer-write");
+	if (!t) return;
+	this.lyxPipeWrite(t);
+	var t = this.lyxPipeRead();
+	alert(t);
     }
 }
 
