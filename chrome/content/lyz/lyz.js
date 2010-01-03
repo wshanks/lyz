@@ -484,7 +484,7 @@ Zotero.Lyz = {
 	    if (bib_file) this.addNewDocument(doc,bib);
 	    else return;//file dialog canceled
 	}
-	items = this.exportToBibtex(zitems);
+	items = this.exportToBibtex(zitems,bib);
 	var keys = new Array();
 	var zids = new Array();
 	for (var id in items){
@@ -504,7 +504,7 @@ Zotero.Lyz = {
 	this.lyxPipeWrite("citation-insert:"+keys.join(","));
     },
     
-    createCiteKey: function(id,text){
+    createCiteKey: function(id,text,bib){
 	var ckre = /.*@[a-z]+\{([^,]+),{1}/;
 	var oldkey = ckre.exec(text)[1];
 	var dic = new Array();
@@ -515,7 +515,6 @@ Zotero.Lyz = {
 	    return [citekey,text];
 	    return;
 	}
-
 	var creators;
 	var authors;
 	var author;
@@ -589,7 +588,7 @@ Zotero.Lyz = {
 	citekey = citekey.replace("{","");
 	citekey = citekey.replace("}","");
 	//check if cite key exists
-	var res = this.DB.query("SELECT key FROM keys WHERE key=\""+citekey+"\"");
+	var res = this.DB.query("SELECT key FROM keys WHERE key=\""+citekey+"\" AND zid<>\""+id+"\"");
 	if (res.length>1) citekey+=(res.length+1);
 	text = text.replace(oldkey,citekey);
 	return [citekey,text];
@@ -602,7 +601,7 @@ Zotero.Lyz = {
 	return biblio.text;
     },
     
-    exportToBibtex: function (items){
+    exportToBibtex: function (items,bib){
 	// returns hash {id:[citekey,text]}
 	var text;
 	var callback = function(obj, worked) {
@@ -617,7 +616,7 @@ Zotero.Lyz = {
 	    var id =Zotero.Items.getLibraryKeyHash(items[i]);
 	    translation.setItems([items[i]]);
 	    translation.translate();
-	    var ct = this.createCiteKey(id,text);
+	    var ct = this.createCiteKey(id,text,bib);
 	    tmp[id] = [ct[0],ct[1]];
 	}
 	return tmp;
@@ -830,18 +829,21 @@ Zotero.Lyz = {
 	   
 	   is.close();
 	*/
-
 	if (!this.replace){//will append to the file
-	    this.fileBackup(bib);
-	    cstream = this.fileReadByLine(bib);
-	    outstream = this.fileWrite(path);
+	    var bib_backup = this.fileBackup(bib);
+	    if (!bib_backup) {alert("Backup failed."); return;}
+	    cstream = this.fileReadByLine(bib_backup);
+	    outstream = this.fileWrite(bib);
 	    var line = {}, lines = [], hasmore;
+	    var line1 = cstream.readLine(line);
+	    outstream.writeString(line.value+" "+zids.join(" ")+"\n");
 	    do {
 		hasmore = cstream.readLine(line);
-		
+		outstream.writeString(line.value+"\n");
 	    } while(hasmore);
-	    
+	    outstream.writeString(entries_text);
 	    cstream.close();
+	    return;
 	    // var text = "";
 	    // var str = {};
 	    // cstream.readString(-1, str); // read the whole file and put it in str.value
@@ -869,13 +871,7 @@ Zotero.Lyz = {
 	    .createInstance(Components.interfaces.nsIConverterOutputStream);
 	cstream.init(fbibtex_stream, "UTF-8", 0, 0);	
 	
-	if (!this.replace){//append new entries
-	    //cstream.writeString(firstline+"\n"+text+"\n"+entries_text);
-	    cstream.writeString(firstline+"\n");
-	    cstream.writeString(text+"\n");
-	    cstream.writeString(entries_text);
-	    
-	} else cstream.writeString(zids.join(" ")+"\n"+entries_text);
+	cstream.writeString(zids.join(" ")+"\n"+entries_text);
 	cstream.close();
 	this.replace = false;
     },
@@ -909,7 +905,7 @@ Zotero.Lyz = {
 		oldkeys[zid] = ids_h[i]['key'];
 	    }
 	    
-	    var ex = this.exportToBibtex(ids);
+	    var ex = this.exportToBibtex(ids,bib);
 	    var zids = new Array();
 	    var newkeys = new Array();
 	    var text = "";
@@ -954,14 +950,14 @@ Zotero.Lyz = {
 	cstream.readLine(line); // read the whole file and put it in str.value
 	line = line.value;
 	cstream.close();
-	
 	var ar = line.split(" ");
 	var info = "";
-	for (var i=1;i<ar.length;i+=2){
+	for (var i=0;i<ar.length;i++){
 	    var zid = ar[i];
 	    var res = this.DB.query("SELECT * FROM keys WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
 	    if(!res){
 		info+=zid+": "+this.exportToBibliography(this.getZoteroItem(zid))+"\n";
+		// key=zid is not right, but it will be updated when updateBibtex is run
 		this.DB.query("INSERT INTO keys VALUES(null,\""+zid+"\",\""+bib+"\",\""+zid+"\")");
 	    }
 	}
@@ -1033,6 +1029,10 @@ Zotero.Lyz = {
     },
     
     fileBackup: function(path){
+	var oldfile = Components.classes["@mozilla.org/file/local;1"]
+    	    .createInstance(Components.interfaces.nsILocalFile);
+	oldfile.initWithPath(path);
+    	
 	var file = Components.classes["@mozilla.org/file/local;1"]
     	    .createInstance(Components.interfaces.nsILocalFile);
 	file.initWithPath(path+".lyz");
@@ -1040,10 +1040,29 @@ Zotero.Lyz = {
     	    file.remove(1);    	
 	}
 	// make new backup
-	file.copyTo(null,file.leafName+".lyz");
-	return 1;
+	oldfile.copyTo(null,oldfile.leafName+".lyz");
+	return path+".lyz";
     },
     
+    fileWrite: function(path){
+	var file = Components.classes["@mozilla.org/file/local;1"]
+	    .createInstance(Components.interfaces.nsILocalFile);
+	file.initWithPath(path);
+	var file_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+	    .createInstance(Components.interfaces.nsIFileOutputStream);
+	
+	// if (this.append) {
+	//     this.append = false;
+	file_stream.init(file, 0x02| 0x20, 0666, 0);// write , truncate
+	// }
+	// else file_stream.init(file, 0x02| 0x10, 0666, 0); // write, append
+	
+	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+	    .createInstance(Components.interfaces.nsIConverterOutputStream);
+	cstream.init(file_stream, "UTF-8", 0, 0);	
+	return cstream;
+    }, 
+
     test: function(){
 	var t = prompt("Command","buffer-write");
 	if (!t) return;
