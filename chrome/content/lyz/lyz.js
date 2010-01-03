@@ -748,51 +748,78 @@ Zotero.Lyz = {
     	}
 
 	//remove old backup file
-	var tmpfile = Components.classes["@mozilla.org/file/local;1"]
-    	    .createInstance(Components.interfaces.nsILocalFile);
-	tmpfile.initWithPath(doc+".lyz");
-    	if(tmpfile.exists()){
-    	    tmpfile.remove(1);    	
+	try {
+	    var tmpfile = Components.classes["@mozilla.org/file/local;1"]
+    		.createInstance(Components.interfaces.nsILocalFile);
+	    tmpfile.initWithPath(doc+".lyz");
+    	    if(tmpfile.exists()){
+    		tmpfile.remove(1);    	
+	    }
+	} catch (e){
+	    alert("Please report the following error:\n"+e);
+	    return;
 	}
 	// make new backup
 	lyxfile.copyTo(null,lyxfile.leafName+".lyz");
 	
 	// that main procedure
 	try {
-    	    var lyxfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
-		createInstance(Components.interfaces.nsIFileInputStream);
-	    lyxfile_stream.init(lyxfile, -1, 0, 0);
+	    cstream = this.fileReadByLine(doc+".lyz");
+	    outstream = this.fileWrite(doc);
+	    var line = {}, lines = [], hasmore;
+	    re = /key\s\"([^\"].*)\"/;
+	    do {
+		
+		hasmore = cstream.readLine(line);
+		var tmp = line.value;
+		if (tmp.search('key')==0){
+		    var tmpkeys = re.exec(tmp)[1].split(',');
+		    for (var i=0;i<tmpkeys.length;i++){
+			var o = tmpkeys[i];
+			var n = newkeys[oldkeys[tmpkeys[i]]];
+			tmp = tmp.replace(o,n);
+		    }
+		}
+		outstream.writeString(tmp+"\n");
+	    } while(hasmore);
 	    
-	    var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
-		createInstance(Components.interfaces.nsIConverterInputStream);
-	    // cstream.init(lyxfile_stream, "UTF-8", 1024, 0xFFFD);
-	    // cstream.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
-	    
-	    cstream.init(lyxfile_stream, "UTF-8", 0, 0);
-	    var text = "";
-	    var str = {};
-	    cstream.readString(-1, str); // read the whole file and put it in str.value
-	    text = str.value;
 	    cstream.close();
 	    
-	    // replace new cite keys
-	    var lines = text.split("\n");
-	    var map = new Array();
-	    for (var zid in newkeys){
-		re = new RegExp(oldkeys[zid],"g");
-		text = text.replace(re,newkeys[zid]);
+	    // var text = "";
+	    // var str = {};
+	    // cstream.readString(-1, str); // read the whole file and put it in str.value
+	    // text = str.value;
+	    // cstream.close();
+	    
+	    // // replace new cite keys
+	    // var lines = text.split("\n");
+	    // var map = new Array();
+	    // for (var zid in newkeys){
+	    // 	re = new RegExp(oldkeys[zid],"g");
+	    // 	text = text.replace(re,newkeys[zid]);
+	    // }
+	    // //write our the modified LyX document
+	    // var lyxfile_stream = Components.classes["@mozilla.org/network/file-output-stream;1"].
+	    // 	createInstance(Components.interfaces.nsIFileOutputStream);
+	    // lyxfile_stream.init(lyxfile, 0x02| 0x20, 0666, 0);// write , truncate
+	    // var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+	    // 	.createInstance(Components.interfaces.nsIConverterOutputStream);
+	    // cstream.init(lyxfile_stream, "UTF-8", 0, 0);	
+	    // cstream.writeString(text);
+	    // cstream.close();
+	    
+	} catch (e){ 
+	    alert("Please report the following error:\n"+e);
+	    var oldfile = Components.classes["@mozilla.org/file/local;1"]
+    		.createInstance(Components.interfaces.nsILocalFile);
+	    oldfile.initWithPath(doc);
+    	    if(oldfile.exists()){
+    		oldfile.remove(1);    	
 	    }
-	    //write our the modified LyX document
-	    var lyxfile_stream = Components.classes["@mozilla.org/network/file-output-stream;1"].
-	    	createInstance(Components.interfaces.nsIFileOutputStream);
-	    lyxfile_stream.init(lyxfile, 0x02| 0x20, 0666, 0);// write , truncate
-	    var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
-	    	.createInstance(Components.interfaces.nsIConverterOutputStream);
-	    cstream.init(lyxfile_stream, "UTF-8", 0, 0);	
-	    cstream.writeString(text);
-	    cstream.close();
-	    
-	} catch (e){ alert("Please report the following error:\n"+e);}
+	    // make new backup
+	    tmpfile.copyTo(null,lyxfile.leafName);
+	
+	}
 	this.lyxPipeWrite("file-open:"+oldpath);	
     },
     
@@ -858,7 +885,7 @@ Zotero.Lyz = {
 	    for (var i=0;i<ids_h.length;i++){
 		var zid = ids_h[i]['zid'];
 		ids.push(this.getZoteroItem(zid));
-		oldkeys[zid] = ids_h[i]['key'];
+		oldkeys[ids_h[i]['key']] = zid;
 	    }
 	    
 	    var ex = this.exportToBibtex(ids,bib);

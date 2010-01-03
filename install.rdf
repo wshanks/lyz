@@ -4,7 +4,7 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>lyz@zotero.org</em:id>
-    <em:version>1.7</em:version>
+    <em:version>1.6.1</em:version>
     <em:type>2</em:type>
    
     <!-- Target Application this extension can install into, 
