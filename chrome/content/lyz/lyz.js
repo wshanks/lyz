@@ -800,28 +800,56 @@ Zotero.Lyz = {
     writeBib: function(bib,entries_text,zids) {
 	var win = this.wm.getMostRecentWindow("navigator:browser");
 	//FIXME: can't get nsIUnicharLineInputStream.readLine to work...
+		/* TODO: change to line by line
+	   file = Components.classes["@mozilla.org/file/local;1"]
+	   .createInstance(Components.interfaces.nsILocalFile);
+	   file.initWithPath("d:\\test.lyx");
+	   var istream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+           createInstance(Components.interfaces.nsIFileInputStream);
+	   istream.init(file, 0x01, 0444, 0);
+	   var is = Components.classes["@mozilla.org/intl/converter-input-stream;1"]
+           .createInstance(Components.interfaces.nsIConverterInputStream);
+	   is.init(istream, "UTF-8", 1024, 0xFFFD);
+	   
+	   is.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
+	   
+	   // read lines into array
+	   
+	   
+	   var line = {}, lines = [], hasmore;
+	   do {
+	   hasmore = is.readLine(line);
+	   if (line.value.search('key')==0){
+	   res = prompt("Stop?",line.value);  
+	   if (!res) break;
+	   }
+	   //lines.push(line.value); 
+	   
+	   
+	   } while(hasmore);
+	   
+	   is.close();
+	*/
+
 	if (!this.replace){//will append to the file
-	    var bibfile = Components.classes["@mozilla.org/file/local;1"]
-		.createInstance(Components.interfaces.nsILocalFile);
-	    bibfile.initWithPath(bib);
-	    if(!bibfile.exists()){
-		win.alert("BibTeX file "+bib+" does not exist.");
-		return;
-	    }
-	    var bibfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
-		createInstance(Components.interfaces.nsIFileInputStream);
-	    cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
-		createInstance(Components.interfaces.nsIConverterInputStream);
-	    bibfile_stream.init(bibfile, -1, 0, 0);
-	    cstream.init(bibfile_stream, "UTF-8", 0, 0);
-	    var text = "";
-	    var str = {};
-	    cstream.readString(-1, str); // read the whole file and put it in str.value
-	    text = str.value;
+	    this.fileBackup(bib);
+	    cstream = this.fileReadByLine(bib);
+	    outstream = this.fileWrite(path);
+	    var line = {}, lines = [], hasmore;
+	    do {
+		hasmore = cstream.readLine(line);
+		
+	    } while(hasmore);
+	    
 	    cstream.close();
-	    text = text.split("\n");
-	    var firstline = text.splice(0,1)+" "+zids.join(" ");
-	    text = text.join("\n");
+	    // var text = "";
+	    // var str = {};
+	    // cstream.readString(-1, str); // read the whole file and put it in str.value
+	    // text = str.value;
+	    // cstream.close();
+	    // text = text.split("\n");
+	    // var firstline = text.splice(0,1)+" "+zids.join(" ");
+	    // text = text.join("\n");
 	}
 	
 	// now write new bibtex file
@@ -921,24 +949,10 @@ Zotero.Lyz = {
 	    win.alert("There is no BibTeX database associated with the active LyX document: "+doc);
 	    return;
 	}
-	//FIXME: can't get nsIUnicharLineInputStream.readLine to work...
-	var bibfile = Components.classes["@mozilla.org/file/local;1"]
-	    .createInstance(Components.interfaces.nsILocalFile);
-	bibfile.initWithPath(bib);
-	if(!bibfile.exists()){
-	    win.alert("BibTeX file "+bib+" does not exist.");
-	    return;
-	}
-	var bibfile_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
-            createInstance(Components.interfaces.nsIFileInputStream);
-	cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
-	    createInstance(Components.interfaces.nsIConverterInputStream);
-	bibfile_stream.init(bibfile, -1, 0, 0);
-	cstream.init(bibfile_stream, "UTF-8", 0, 0);
-	var line = "";
-	var str = {};
-	cstream.readString(-1, str); // read the whole file and put it in str.value
-	line = str.value.split("\n")[0];
+	var cstream = this.fileReadByLine(bib);
+	var line = {};
+	cstream.readLine(line); // read the whole file and put it in str.value
+	line = line.value;
 	cstream.close();
 	
 	var ar = line.split(" ");
@@ -997,6 +1011,37 @@ Zotero.Lyz = {
 	    this.replace = true;
 	    return fp.file;
 	}
+    },
+    
+    fileReadByLine: function(path){
+	var file = Components.classes["@mozilla.org/file/local;1"]
+	    .createInstance(Components.interfaces.nsILocalFile);
+	file.initWithPath(path);
+	if(!file.exists()){
+	    win.alert("File "+path+" does not exist.");
+	    return;
+	}
+	var file_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+	    createInstance(Components.interfaces.nsIFileInputStream);
+	cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+	    createInstance(Components.interfaces.nsIConverterInputStream);
+	file_stream.init(file, -1, 0, 0);
+	//cstream.init(file_stream, "UTF-8", 0, 0);
+	cstream.init(file_stream, "UTF-8", 1024, 0xFFFD);
+	cstream.QueryInterface(Components.interfaces.nsIUnicharLineInputStream);
+	return cstream;
+    },
+    
+    fileBackup: function(path){
+	var file = Components.classes["@mozilla.org/file/local;1"]
+    	    .createInstance(Components.interfaces.nsILocalFile);
+	file.initWithPath(path+".lyz");
+    	if(file.exists()){
+    	    file.remove(1);    	
+	}
+	// make new backup
+	file.copyTo(null,file.leafName+".lyz");
+	return 1;
     },
     
     test: function(){
