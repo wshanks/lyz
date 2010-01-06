@@ -675,7 +675,7 @@ Zotero.Lyz = {
     	}	
 	newfname = this.dialog_FilePickerOpen(win,"Select LyX document for "+doc,"LyX", "*.lyx").path;
 	if(!newfname) return;
-	this.DB.query("UPDATE docs SET doc=\""+newfname+"\" WHERE id=\""+id+"\"");
+	this.DB.query("UPDATE docs SET doc=\""+newfname+"\" WHERE doc=\""+doc+"\"");
 	
     },
     
