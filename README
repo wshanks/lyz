@@ -1,23 +1,10 @@
 * TODO
+* Requests
+** Notification about current doc and citekey
+** Doc and bib in subversion
 ** cite keys more configurable, e.g. author:09:conference
 e.g. 'author year,2 venue' comma to split
 ** Bibtex updated only on changes, make diff
-  
-* NEW
-** rename doc and bib
-** sync LyZ/Bibtex/LyX
-
-* TEST CASE
- 1. 
-* Requests
-** update lyz from bibtex file 
-** Notification about current doc and citekey
-** Doc and bib in subversion
-* Would be nice
-** not initialized when new window opened
-** incompatibility with zotfile
-find out how to properly insert lyz menu into zotero menu
-
 * NOTES
 ** Internal LyX implementation
 python server, LyX client, Zotero plugin client
@@ -25,8 +12,6 @@ python server, LyX client, Zotero plugin client
 * ZOTERO
 ** disable search for string shorter than 2?
 ** single instance of zotero
-
-
 * Firefox
 •extensions.logging.enabled:
 •javascript.options.showInConsole:

@@ -4,8 +4,10 @@
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   id="lyz-select-dialog"
   title="Select records"
+  buttons="accept,cancel"
   onload="return onLoad();"
-  ondialogaccept="return onOK();">
+  ondialogaccept="return onOK();"
+  ondialogcancel="return onCancel();">
   <script type="application/javascript" src="chrome://lyz/content/select.js"/>
   <listbox id="lyz-listbox">
   </listbox>

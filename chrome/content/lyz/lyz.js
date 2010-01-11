@@ -387,9 +387,14 @@ Zotero.Lyz = {
 	var msg;
 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 
-	pipein = Components.classes["@mozilla.org/file/local;1"]
-	    .createInstance(Components.interfaces.nsILocalFile);
-	pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
+	try {
+	    pipein = Components.classes["@mozilla.org/file/local;1"]
+		.createInstance(Components.interfaces.nsILocalFile);
+	    pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
+	} catch(e){
+	    alert("Wrong path to Lyx server:\n"+this.prefs.getCharPref("lyxserver")+"\n"+e);
+	}
+
 	if(!pipein.exists()){
 	    win.alert("Wrong path to Lyx server.\nSet the path specified in Lyx preferences.");
 	    return;
@@ -465,6 +470,7 @@ Zotero.Lyz = {
 	if (!bib) {
 	    t = "Press OK to create new BibTeX database.\n";
 	    t+= "Press Cancel to select from your existing databases";
+	    t+= "NOTE: You have to set the LyX document to UTF8 \nif your references contain accented characters.";
 	    // FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
 	    // var check = { value: true };
 	    // var ifps = Components.interfaces.nsIPromptService;
@@ -577,7 +583,12 @@ Zotero.Lyz = {
 	dic["title"] = title;
 	// YEAR
 	ckre = /.*year\s?=\s?\{(.*)\},?/;
-	year = ckre.exec(text)[1].replace(" ","");
+	try {
+	    year = ckre.exec(text)[1].replace(" ","");
+	} catch (e) {
+	    alert("All entries should to be dated. Please add a date to:\n"+text);
+	    year = "????";
+	}
 	dic["year"] = year;
 	// custom cite key
 	p = this.prefs.getCharPref("citekey").split(" ");
@@ -630,7 +641,7 @@ Zotero.Lyz = {
     		      out:null};       
     	var res = win.openDialog("chrome://lyz/content/select.xul", "",
     		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-	if(!res) return;
+	if(!params.out) return;
 	var bib;
     	if (params.out) {
 	    bib = params.out.item;
@@ -650,7 +661,8 @@ Zotero.Lyz = {
     		      out:null};       
     	var res = win.openDialog("chrome://lyz/content/select.xul", "",
     		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-	if (!res) return;
+	if(!params.out) return;
+	
 	var doc;
     	if (params.out) {
 	    doc = params.out.item;
@@ -668,7 +680,7 @@ Zotero.Lyz = {
     		      out:null};       
     	var res = win.openDialog("chrome://lyz/content/select.xul", "",
     		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-	if (!res) return;
+	if (!params.out) return;
 	var doc;
     	if (params.out) {
 	    doc = params.out.item;
@@ -686,7 +698,7 @@ Zotero.Lyz = {
     		      out:null};
     	var res = win.openDialog("chrome://lyz/content/select.xul", "",
     		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-	if (!res) return;
+	if (!params.out) return;
 	var bib;
     	if (params.out) {
 	    bib = params.out.item;
@@ -880,6 +892,7 @@ Zotero.Lyz = {
 	if (p){
 	    // get all ids for the bibtex file
 	    var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
+	    //alert("DEBUG: "+ids_h.length);
 	    var ids = new Array();
 	    var oldkeys = new Array();
 	    for (var i=0;i<ids_h.length;i++){
@@ -950,6 +963,7 @@ Zotero.Lyz = {
     },
     
     getZoteroItem: function(key){
+	//alert("DEBUG:"+key);
 	var keyhash = Zotero.Items.parseLibraryKeyHash(key);
 	return Zotero.Items.getByLibraryAndKey(keyhash.libraryID, keyhash.key);
 
