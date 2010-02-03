@@ -1,4 +1,11 @@
 * TODO
+** corrected bug concerning alerts
+** additional character mapping for cite keys
+- ask for charset on bibtex update
+- zotero preferences are used, so extensions.zotero.export.displayCharsetOption is always set to true and
+extensions.zotero.export.translatorSettings is also modified from Lyz
+This only means that, when exporting from Zotero, character encoding combo box is displayed. 
+In Lyz, the character encoding can be modified when creating new bibtex file or when updating.
 ** support additional encoding (from Zotero)
 * Requests
 ** Notification about current doc and citekey
