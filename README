@@ -1,4 +1,6 @@
 * TODO
+** support for Kile
+
 ** fixed bug with alerts
 ** added character encodings on demand
 Zotero preferences are used, so extensions.zotero.export.displayCharsetOption is always set to true and
