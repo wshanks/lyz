@@ -10,6 +10,8 @@ In Lyz, the character encoding can be modified when creating new bibtex file or 
 ** Please note: update bibtex 
 Update bibtex will only update current lyx document. 
 Multiple document update is implemented, but seems unreliable. Needs more testing.
+** citekeys now conform to /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g
+
 
 * Requests
 ** cite keys more configurable, e.g. author:09:conference
