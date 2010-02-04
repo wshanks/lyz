@@ -2,6 +2,13 @@
 // - small bits were borrowed from Lytero by Demetrio Girardi, lytero@dementrioatgmail.com
 // - mapping table comes form BibTeX.js, part of Zotero
 
+const BOMs = {
+	    "UTF-8":"\xEF\xBB\xBF",
+	    "UTF-16BE":"\xFE\xFF",
+	    "UTF-16LE":"\xFF\xFE",
+	    "UTF-32BE":"\x00\x00\xFE\xFF",
+	    "UTF-32LE":"\xFF\xFE\x00\x00"};
+
 var mappingTable = {
     "\u00A0":"~", // NO-BREAK SPACE
     "\u00A1":"{\\textexclamdown}", // INVERTED EXCLAMATION MARK
@@ -1123,6 +1130,7 @@ Zotero.Lyz = {
 	
 	// check document name
 	var res = this.checkDocInDB();
+	//win.alert("1");
 	var doc = res[1];
 	var bib = res[0];
 	var enc = res[2]
@@ -1136,7 +1144,7 @@ Zotero.Lyz = {
 	if (!bib) {
 	    t = "Press OK to create new BibTeX database.\n";
 	    t+= "Press Cancel to select from your existing databases\n";
-	    t+= "NOTE: You have to set the LyX document to UTF8 \nif your references contain accented characters.";
+	    
 	    // FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
 	    // var check = { value: true };
 	    // var ifps = Components.interfaces.nsIPromptService;
@@ -1159,6 +1167,7 @@ Zotero.Lyz = {
 	    if (bib_file) this.addNewDocument(doc,bib,enc);
 	    else return;//file dialog canceled
 	}
+	//win.alert("2");
 	items = this.exportToBibtex(zitems,bib,enc);
 	var keys = new Array();
 	var zids = new Array();
@@ -1175,8 +1184,9 @@ Zotero.Lyz = {
 		entries_text+=text;
 	    }
 	}
-	if (!entries_text=="") this.writeBib(bib,entries_text,zids);
+	if (!entries_text=="") this.writeBib(bib,entries_text,zids,enc);
 	res = this.lyxPipeWrite("citation-insert:"+keys.join(","));
+	//win.alert("3");
     },
     
     createCiteKey: function(id,text,bib){
@@ -1298,12 +1308,14 @@ Zotero.Lyz = {
 	    text = obj.output.replace(/\r\n/g, "\n");
 	};
 	var win = this.wm.getMostRecentWindow("navigator:browser");
-	pref = this.zprefs.setCharPref("export.translatorSettings",'{"exportCharset":"'+enc+'"}');
-	//v.replace(/\"exportCharset\":\"(.*)\"/,'"exportCharset":"'+enc+'"')
+	//pref = this.zprefs.setCharPref("export.translatorSettings",'{"exportCharset":"'+enc+'"}');
 	var translation = new Zotero.Translate("export");
 	translation.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
+	
+	if (enc.indexOf("UTF")==-1){
+	    translation.setDisplayOptions({"exportCharset":"\""+enc+"\""});
+	}
 	translation.setHandler("done", callback);
-	translation.setDisplayOptions({"exportCharset":"\""+enc+"\""});
 	var tmp = new Array();
 	for (var i=0;i<items.length;i++){
 	    var id =Zotero.Items.getLibraryKeyHash(items[i]);
@@ -1316,7 +1328,6 @@ Zotero.Lyz = {
     },
     
     dbDeleteBib: function(){
-	//
 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
 	var params = {inn:{items:dic,type:"bib"},
@@ -1391,7 +1402,7 @@ Zotero.Lyz = {
 	this.DB.query("UPDATE keys SET bib=\""+newfname+"\" WHERE bib=\""+bib+"\"");
     },
     
-    syncBibtexKeyFormat: function(doc,oldkeys,newkeys){
+    syncBibtexKeyFormat: function(doc,oldkeys,newkeys,enc){
     	var win = this.wm.getMostRecentWindow("navigator:browser");
 	//this.lyxPipeWrite("buffer-write");
 	//this.lyxPipeWrite("buffer-close");	    
@@ -1428,7 +1439,7 @@ Zotero.Lyz = {
 	win.alert("Updating "+doc);
 	try {
 	    cstream = this.fileReadByLine(doc+".lyz~");
-	    outstream = this.fileWrite(doc);
+	    outstream = this.fileWrite(doc,enc)[1];
 	    var line = {}, lines = [], hasmore;
 	    re = /key\s\"([^\"].*)\"/;
 	    do {
@@ -1462,48 +1473,103 @@ Zotero.Lyz = {
 	//this.lyxPipeWrite("file-open:"+oldpath);	
     },
     
-    writeBib: function(bib,entries_text,zids) {
+    writeBib: function(bib,entries_text,zids,enc) {
 	var win = this.wm.getMostRecentWindow("navigator:browser");
 	if (!this.replace){//will append to the file
 	    var bib_backup = this.fileBackup(bib);
 	    if (!bib_backup) {win.alert("Backup failed."); return;}
 	    cstream = this.fileReadByLine(bib_backup);
-	    outstream = this.fileWrite(bib);
+	    outstream = this.fileWrite(bib,enc)[1];
 	    var line = {}, lines = [], hasmore;
 	    cstream.readLine(line);
-	    //hack around the mysterious space
-	    if (line.value==" ") {
-		outstream.writeString(zids.join(" ")+"\n");
-	    } else {
-		outstream.writeString(line.value+" "+zids.join(" ")+"\n");
-	    }
+	    // //hack around the mysterious space
+	    // if (line.value==" ") {
+	    // 	outstream.writeString(zids.join(" ")+"\n");
+	    // } else {
+
+	    //win.alert(enc+":"+line.value);
+	    // if (line.value.indexOf(BOMs[enc]) == 0){//old bibtex was in unicode
+	    // 	var s = line.value.replace(BOMs[enc],"");
+	    // 	win.alert(s+":"+line.value);
+	    // 	outstream.writeString(s+" "+zids.join(" ")+"\n");
+	    // } else {
+	    outstream.writeString(line.value+" "+zids.join(" ")+"\n");
+	    //}
+	    //	    }
 	    
 	    do {
 		hasmore = cstream.readLine(line);
 		outstream.writeString(line.value+"\n");
 	    } while(hasmore);
 	    outstream.writeString(entries_text);
+	    outstream.close();
 	    cstream.close();
 	    return;
 	}
 	
-	// now write new bibtex file
-	var fbibtex = Components.classes["@mozilla.org/file/local;1"]
-	    .createInstance(Components.interfaces.nsILocalFile);
-	fbibtex.initWithPath(bib);
-	var fbibtex_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
-	    .createInstance(Components.interfaces.nsIFileOutputStream);
+	var fbibtex_stream, cstream;
+	[fbibtex_stream,cstream] = this.fileWrite(bib,enc);
 
-	fbibtex_stream.init(fbibtex, 0x02| 0x20, 0666, 0);// write , truncate
-	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
-	    .createInstance(Components.interfaces.nsIConverterOutputStream);
-	cstream.init(fbibtex_stream, "UTF-8", 0, 0);	
-	
-	cstream.writeString(zids.join(" ")+"\n"+entries_text);
+	var data = zids.join(" ")+"\n"+entries_text;	
+	// if(enc == "macintosh") {
+	//     win.alert(enc);
+	//     // fix buggy Mozilla MacRoman
+	//     splitData = data.split(/([\r\n]+)/);
+	//     for(var i=0; i<splitData.length; i+=2) {
+	// 	// write raw newlines straight to the string
+	// 	cstream.writeString(splitData[i]);
+	// 	if(splitData[i+1]) {
+	// 	    fbibtex_stream.write(splitData[i+1], splitData[i+1].length);
+	// 	}
+	//     }
+	//     return;
+	// } else {
+	cstream.writeString(data);
+	//}	
 	cstream.close();
 	this.replace = false;
     },
     
+    // exportIO: function (fbibtex,enc){
+    // 	// var BOMs = {
+    // 	//     "UTF-8":"\xEF\xBB\xBF",
+    // 	//     "UTF-16BE":"\xFE\xFF",
+    // 	//     "UTF-16LE":"\xFF\xFE",
+    // 	//     "UTF-32BE":"\x00\x00\xFE\xFF",
+    // 	//     "UTF-32LE":"\xFF\xFE\x00\x00"};
+	
+    // 	// var fbibtex_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+    // 	//     .createInstance(Components.interfaces.nsIFileOutputStream);
+    // 	// fbibtex_stream.init(fbibtex, 0x02 | 0x08 | 0x20, 0664, 0); // write, create, truncate
+	
+    // 	//credit: this comes (dissected) from Zotero's translate.js
+    // 	enc = enc.toUpperCase();
+    // 	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+    // 	    .createInstance(Components.interfaces.nsIConverterOutputStream);
+    // 	// FIXME: I wander if this can ever happen due to the enc.toUpperCase()
+    // 	if(enc == "UTF-8xBOM") enc = "UTF-8";
+    // 	cstream.init(fStream, enc, 1024, "?".charCodeAt(0));
+	
+    // 	if(BOMs[streamCharset]) {
+    // 	    fStream.write(BOMs[streamCharset], BOMs[streamCharset].length);
+    // 	}
+	
+    // 	if(enc == "MACINTOSH") {
+    // 	    // fix buggy Mozilla MacRoman
+    // 	    splitData = data.split(/([\r\n]+)/);
+    // 	    for(var i=0; i<splitData.length; i+=2) {
+    // 		// write raw newlines straight to the string
+    // 		cstream.writeString(splitData[i]);
+    // 		if(splitData[i+1]) {
+    // 		    fbibtex_stream.write(splitData[i+1], splitData[i+1].length);
+    // 		}
+    // 	    }
+    // 	    return;
+    // 	} else {
+    // 	    ctream.writeString(data);
+    // 	}
+    // },
+
     updateBibtexAll: function(){
 	//first update from the bibtex file
 	this.updateFromBibtexFile();
@@ -1522,11 +1588,11 @@ Zotero.Lyz = {
 	var p = win.confirm("You are going to update BibTeX database:\n\n"+
 		      bib+"\n\nCurrent BibTex key format \""+
 		      citekey+"\" will be used.\nDo you want to continue?");
-	// var newenc = this.dialog_askForCharset();
-	// if (newenc != enc){
-	//     this.DB.query("UPDATE docs SET enc=\""+newenc+"\" WHERE doc=\""+doc+"\"");
-	//     enc = newenc;
-	// };
+	var newenc = this.dialog_askForCharset();
+	if (newenc != enc){
+	    enc = newenc;
+	    this.DB.query("UPDATE docs SET enc=\""+enc+"\" WHERE doc=\""+doc+"\"");
+	};
 	if (p){
 	    // get all ids for the bibtex file
 	    var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=\""+bib+"\" GROUP BY zid");
@@ -1555,7 +1621,7 @@ Zotero.Lyz = {
 		this.DB.query("UPDATE keys SET key=\""+newkeys[zid]+
 			      "\" WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
 	    }
-	    this.writeBib(bib,text,zids);
+	    this.writeBib(bib,text,zids,enc);
 	    var res = win.confirm("Your BibTeX database "+bib+" has been updated.\n"+
 				  "Do you also want to update the associated LyX documents?\n"+
 				  "This is only necessary when any author, title or year has been modified,\n"
@@ -1563,12 +1629,13 @@ Zotero.Lyz = {
 	    if (!res) return;
 	    
 	    var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");
-	    if (tmp.length==1){
-		this.lyxPipeWrite("buffer-write");
-		this.lyxPipeWrite("buffer-close");	    
-		this.syncBibtexKeyFormat(doc,oldkeys,newkeys);
-		this.lyxPipeWrite("file-open:"+doc);
-	    } // else {
+	    
+	    //if (tmp.length==1){
+	    this.lyxPipeWrite("buffer-write");
+	    this.lyxPipeWrite("buffer-close");	    
+	    this.syncBibtexKeyFormat(doc,oldkeys,newkeys,enc);
+	    this.lyxPipeWrite("file-open:"+doc);
+	    //} // else {
 	    // 	var docs = new Array();
 	    // 	var open_docs = this.lyxGetOpenDocs();
 	    // 	this.lyxPipeWrite("buffer-write-all");
@@ -1636,6 +1703,7 @@ Zotero.Lyz = {
 	var io = {translators:translation.translator};
 	win.openDialog("chrome://zotero/content/exportOptions.xul",
 		"_blank", "chrome,modal,centerscreen,resizable=no", io);
+	
 	c = this.zprefs.getCharPref("export.translatorSettings");
 	re = /{\"exportCharset\":\"(.*)\"}/;
 	enc = re.exec(c)[1];
@@ -1714,60 +1782,61 @@ Zotero.Lyz = {
 	return path+".lyz~";
     },
     
-    fileWrite: function(path){
+    fileWrite: function(path,enc){
+	var win = this.wm.getMostRecentWindow("navigator:browser");
 	var file = Components.classes["@mozilla.org/file/local;1"]
 	    .createInstance(Components.interfaces.nsILocalFile);
 	file.initWithPath(path);
 	var file_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIFileOutputStream);
-	
-	// if (this.append) {
-	//     this.append = false;
+
 	file_stream.init(file, 0x02| 0x20, 0666, 0);// write , truncate
-	// }
-	// else file_stream.init(file, 0x02| 0x10, 0666, 0); // write, append
-	
 	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIConverterOutputStream);
-	cstream.init(file_stream, "UTF-8", 0, 0);	
-	return cstream;
+	//this comes (dissected) from Zotero's translate.js
+	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+	    .createInstance(Components.interfaces.nsIConverterOutputStream);
+	
+	// FIXME: I wander if this can ever happen due to the enc.toUpperCase()
+	enc = enc.toUpperCase();// the upper
+	//win.alert(enc);
+	if(enc == "UTF-8xBOM") enc = "UTF-8";
+	cstream.init(file_stream, enc, 1024, "?".charCodeAt(0));
+	
+	if(BOMs[enc]) {
+	    file_stream.write(BOMs[enc], BOMs[enc].length);
+	}
+	
+	// --- 
+	// var file = Components.classes["@mozilla.org/file/local;1"]
+	//     .createInstance(Components.interfaces.nsILocalFile);
+	// file.initWithPath(path);
+	// var file_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+	//     .createInstance(Components.interfaces.nsIFileOutputStream);
+	
+	// // if (this.append) {
+	// //     this.append = false;
+	// file_stream.init(file, 0x02| 0x20, 0666, 0);// write , truncate
+	// // }
+	// // else file_stream.init(file, 0x02| 0x10, 0666, 0); // write, append
+	
+	// var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+	//     .createInstance(Components.interfaces.nsIConverterOutputStream);
+	// cstream.init(file_stream, enc, 0, 0);	
+	return [file_stream,cstream];
     }, 
     
     test: function(){
-	// var win = this.wm.getMostRecentWindow("navigator:browser"); 
-	// var translation = new Zotero.Translate("export");
-	// translation.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
-	
-	// var io = {translators:translation.getTranslators()};
-	// win.openDialog("chrome://zotero/content/exportOptions.xul",
-	// 	"_blank", "chrome,modal,centerscreen,resizable=no", io);
-	// if(!io.selectedTranslator) {
-	// 	return false;
-	// }
-	zprefs = Components.classes["@mozilla.org/preferences-service;1"].
-	    getService(Components.interfaces.nsIPrefService);
-	zprefs = zprefs.getBranch("extensions.zotero.");	
-	zprefs.setBoolPref("export.displayCharsetOption",true);
-	// c = zprefs.getCharPref("export.translatorSettings");
-
-	// re = /{\"exportCharset\":\"(.*)\"}/;
-	// enc = re.exec(c)[1];
-	// win.alert(enc);
-	// var params = {inn:"UTF8",
-    	// 	      out:null};       
-    	// var res = win.openDialog("chrome://lyz/content/newbibfile.xul", "",
-    	// 	       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-	// if(!params.out) return;
-	// var bib;
-    	// if (params.out) {
-	//     bib = params.out.item;
-    	// }	
-	
-	// var t = prompt("Command","buffer-write");
-	// if (!t) return;
-	// this.lyxPipeWrite(t);
-	// var t = this.lyxPipeRead();
-	// win.alert(t);
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var t = prompt("Command","server-get-filename");
+	if (!t) {
+	    win.alert("Error: !t");
+	    return;
+	}
+	this.lyxPipeWrite(t);
+	win.alert("After write");
+	var t = this.lyxPipeRead();
+	win.alert("RESPONSE: "+t);
     }
     
 }

@@ -1,17 +1,20 @@
 * TODO
-** corrected bug concerning alerts
-** additional character mapping for cite keys
-- ask for charset on bibtex update
-- zotero preferences are used, so extensions.zotero.export.displayCharsetOption is always set to true and
+** fixed bug with alerts
+** added character encodings on demand
+Zotero preferences are used, so extensions.zotero.export.displayCharsetOption is always set to true and
 extensions.zotero.export.translatorSettings is also modified from Lyz
-This only means that, when exporting from Zotero, character encoding combo box is displayed. 
-In Lyz, the character encoding can be modified when creating new bibtex file or when updating.
-** support additional encoding (from Zotero)
+This only means that, when exporting from Zotero, character encoding combo box is displayed.
+In Lyz, the character encoding can be modified when creating new bibtex file or when updating bibtex.
+** added BOM
+** additional character mappings for cite keys
+** Please note: update bibtex 
+Update bibtex will only update current lyx document. 
+Multiple document update is implemented, but seems unreliable. Needs more testing.
+
 * Requests
-** Notification about current doc and citekey
-** Doc and bib in subversion
 ** cite keys more configurable, e.g. author:09:conference
 e.g. 'author year,2 venue' comma to split
+** Notification about current doc and citekey
 ** Bibtex updated only on changes, make diff
 * NOTES
 ** Internal LyX implementation
