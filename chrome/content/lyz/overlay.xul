@@ -13,9 +13,9 @@
 	  <toolbarbutton id="lyz-menu-button" tooltiptext="LyZ" type="menu" 
 			 insertafter="zotero-tb-attachment-add">
 	    <menupopup id="lyz-menupopup">
-	      <menuitem id="lyz-test"
-	      		label="Test..."
-	      		oncommand="Zotero.Lyz.test()"/>
+	      <!-- <menuitem id="lyz-test" -->
+	      <!-- 		label="Test..." -->
+	      <!-- 		oncommand="Zotero.Lyz.test()"/> -->
 	      <menuitem id="lyz-send" 
 			label="&cite;" 
 			oncommand="Zotero.Lyz.checkAndCite()"

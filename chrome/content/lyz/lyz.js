@@ -64,7 +64,14 @@ Zotero.Lyz = {
 	    docs.push(name);
 	} while (go);
     },
-
+    
+    lyxGetPos: function (){
+	this.lyxPipeWrite("server-get-xy");
+        var res = this.lyxPipeRead();
+	xy = /INFO:lyz:server-get-xy:(.*)/.exec(res)[1];
+	return xy;
+    },
+    
     lyxPipeRead: function(){
 	// reading from lyxpipe.out
 	var pipeout;
@@ -219,23 +226,33 @@ Zotero.Lyz = {
 	items = this.exportToBibtex(zitems,bib);
 	var keys = new Array();
 	var zids = new Array();
-	for (var id in items){
-	    citekey = items[id][0];
-	    text = items[id][1];
+	for (var zid in items){
+	    citekey = items[zid][0];
+	    text = items[zid][1];
 	    keys.push(citekey);
 	    //check database, if not in, append to entries_text
 	    //single key can be associated with several bibtex files
-	    var res = this.DB.query("SELECT zid FROM keys WHERE key=\""+citekey+"\" AND bib=\""+bib+"\"");
+	    var res = this.DB.query("SELECT key FROM keys WHERE bib=\""+bib+"\" AND zid=\""+zid+"\"");
 	    if(!res){
-		this.DB.query("INSERT INTO keys VALUES(null,\""+citekey+"\",\""+bib+"\",\""+id+"\")");
-		zids.push(id)
+		this.DB.query("INSERT INTO keys VALUES(null,\""+citekey+"\",\""+bib+"\",\""+zid+"\")");
+		zids.push(zid)
 		entries_text+=text;
+	    } else if (res[0]['key'] != citekey) {
+		var ask = win.confirm("Zotero record has been changed.\n"+
+				      "Press OK to run 'Update BibTeX' and insert the citation.\n"+
+				      "Press Cancel to refrain of any action.","Zotero record changed!");
+		if (ask){
+		    var xy = this.lyxGetPos();
+		    this.updateBibtexAll();
+                    this.lyxPipeWrite("server-set-xy:"+xy);
+		} else {return;}
 	    }
 	}
 	if (!entries_text=="") this.writeBib(bib,entries_text,zids);
 	res = this.lyxPipeWrite("citation-insert:"+keys.join(","));
 	//win.alert("3");
     },
+    
     
     createCiteKey: function(id,text,bib){
 	var win = this.wm.getMostRecentWindow("navigator:browser");
@@ -745,10 +762,20 @@ Zotero.Lyz = {
 	    return;
 	}
 	this.lyxPipeWrite(t);
-	win.alert("After write");
-	var t = this.lyxPipeRead();
-	win.alert("RESPONSE: "+t);
-    }
-    
+	function pause(milliseconds) {
+	    var dt = new Date();
+	    while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
+	}
+	try {
+	    var t = this.lyxPipeRead();
+	    win.alert("RESPONSE: "+t);
+	} catch (e) {
+	    win.alert("Error connecting to lyxserver...\n"+e+"\nTrying again.");
+	    pause(1000);
+	    var t = this.lyxPipeRead();
+	    win.alert("RESPONSE: "+t);
+	}
+	win.alert("DONE");
+    }   
 }
 
