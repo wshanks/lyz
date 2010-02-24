@@ -1,7 +1,14 @@
 * TODO
 ** support for Kile
 * DONE
-** when zotero record is changed and update bibtex not commenced alert
+** Added preference: extensions.lyz.use_utf8
+  - by default all characters are escaped
+  - set extensions.lyz.use_utf8 to true in about:config to avoid escaping
+** Added support for non-latin scripts
+  - tested on simplified Chinese
+  - set extensions.lyz.use_utf8 to true in about:config to avoid escaping
+  - cite key will use numeric value of the unicode characters, e.g.         9648 instead of 陈. Only the first character from author name is used. Title is not used, only year.
+
 * Requests
 ** cite keys more configurable, e.g. author:09:conference
 e.g. 'author year,2 venue' comma to split
