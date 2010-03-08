@@ -622,6 +622,7 @@ Zotero.Lyz = {
 	    
 	    //if (tmp.length==1){
 	    this.lyxPipeWrite("buffer-write");
+            this.pause(100);
 	    this.lyxPipeWrite("buffer-close");	    
 	    this.syncBibtexKeyFormat(doc,oldkeys,newkeys);
 	    this.lyxPipeWrite("file-open:"+doc);
@@ -789,21 +790,22 @@ Zotero.Lyz = {
 	    return;
 	}
 	this.lyxPipeWrite(t);
-	function pause(milliseconds) {
-	    var dt = new Date();
-	    while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
-	}
 	try {
 	    var t = this.lyxPipeRead();
 	    win.alert("RESPONSE: "+t);
 	} catch (e) {
 	    win.alert("Error connecting to lyxserver...\n"+e+"\nTrying again.");
-	    pause(1000);
+	    this.pause(1000);
 	    var t = this.lyxPipeRead();
 	    win.alert("RESPONSE: "+t);
 	}
 	win.alert("DONE");
-    }   
+    },
+    
+    pause: function(milliseconds){
+	var dt = new Date();
+	while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
+    }
 }
 
 var mappingTable = {
