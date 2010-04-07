@@ -1,5 +1,6 @@
 * TODO
 ** support for Kile
+** setting what gets exported, e.g. not url etc.
 * DONE
 ** Added preference: extensions.lyz.use_utf8
   - by default all characters are escaped
@@ -10,6 +11,8 @@
   - cite key will use numeric value of the unicode characters, e.g.         9648 instead of 陈. Only the first character from author name is used. Title is not used, only year.
 
 * Requests
+** configurable: which fields to export
+maybe per reference, or globally
 ** cite keys more configurable, e.g. author:09:conference
 e.g. 'author year,2 venue' comma to split
 ** Notification about current doc and citekey

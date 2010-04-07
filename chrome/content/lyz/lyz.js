@@ -506,8 +506,7 @@ Zotero.Lyz = {
 	    outstream = this.fileWrite(doc)[1];
 	    var line = {}, lines = [], hasmore;
 	    re = /key\s\"([^\"].*)\"/;
-	    do {
-		
+	    do {	
 		hasmore = cstream.readLine(line);
 		var tmp = line.value;
 		if (tmp.search('key')==0){
@@ -515,7 +514,9 @@ Zotero.Lyz = {
 		    for (var i=0;i<tmpkeys.length;i++){
 			var o = tmpkeys[i];
 			var n = newkeys[oldkeys[tmpkeys[i]]];
-			tmp = tmp.replace(o,n);
+                        // user can have citations from alternative bibtex file
+                        // ignore those
+                        if (n!=undefined) tmp = tmp.replace(o,n);
 		    }
 		}
 		outstream.writeString(tmp+"\n");
@@ -618,19 +619,20 @@ Zotero.Lyz = {
 				  +"or when the BibTex key format has been changed.");
 	    if (!res) return;
 	    
-	    var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");
-	    
-	    //if (tmp.length==1){
+	    // var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
+	    // if (tmp.length==1){
 	    this.lyxPipeWrite("buffer-write");
             this.pause(100);
 	    this.lyxPipeWrite("buffer-close");	    
 	    this.syncBibtexKeyFormat(doc,oldkeys,newkeys);
 	    this.lyxPipeWrite("file-open:"+doc);
-	    //} // else {
+	    // } else {
 	    // 	var docs = new Array();
 	    // 	var open_docs = this.lyxGetOpenDocs();
+            //     this.pause(100);
 	    // 	this.lyxPipeWrite("buffer-write-all");
 	    // 	for (var i=0;i<open_docs.length;i++){
+            //         this.pause(100);
 	    // 	    this.lyxPipeWrite("buffer-close");
 	    // 	}
 	    // 	for (var k=0;k<tmp.length;k++){
@@ -639,11 +641,11 @@ Zotero.Lyz = {
 	    // 	}
 		
 	    // 	for (var j=0;j<open_docs.length;j++){
+            //         this.pause(100);
 	    // 	    this.lyxPipeWrite("file-open:"+open_docs[j]);
 	    // 	}
-	    // }
-	    
-	}
+	    // }   
+	}//end of if (p)
     },
     
     
@@ -763,14 +765,10 @@ Zotero.Lyz = {
 	    .createInstance(Components.interfaces.nsIFileOutputStream);
 
 	file_stream.init(file, 0x02| 0x20, 0666, 0);// write , truncate
+	//this comes from Zotero's translate.js
 	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
 	    .createInstance(Components.interfaces.nsIConverterOutputStream);
-	//this comes (dissected) from Zotero's translate.js
-	var cstream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
-	    .createInstance(Components.interfaces.nsIConverterOutputStream);
-	
 	cstream.init(file_stream,"UTF-8", 1024, "?".charCodeAt(0));
-	
 	file_stream.write("\xEF\xBB\xBF", "\xEF\xBB\xBF".length);
 	return [file_stream,cstream];
     }, 
