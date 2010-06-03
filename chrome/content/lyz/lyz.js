@@ -9,222 +9,165 @@ Zotero.Lyz = {
     wm: null,
     
     init: function () {
-		//set up preferences
-		this.prefs = Components.classes["@mozilla.org/preferences-service;1"].
-		    getService(Components.interfaces.nsIPrefService);
-		this.prefs = this.prefs.getBranch("extensions.lyz.");	
-		
-		this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-	                     .getService(Components.interfaces.nsIWindowMediator);
+	//set up preferences
+	this.prefs = Components.classes["@mozilla.org/preferences-service;1"].
+	    getService(Components.interfaces.nsIPrefService);
+	this.prefs = this.prefs.getBranch("extensions.lyz.");	
 	
-		this.DB = new Zotero.DBConnection("lyz");
-		var sql;
-		if (!this.DB.tableExists('docs')) {
-		    sql = "CREATE TABLE docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)"
-		    this.DB.query(sql);
-		    sql = "CREATE TABLE keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)"
-		    this.DB.query(sql);
-		} 
+	this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+	    .getService(Components.interfaces.nsIWindowMediator);
+	
+	this.DB = new Zotero.DBConnection("lyz");
+	var sql;
+	if (!this.DB.tableExists('docs')) {
+	    sql = "CREATE TABLE docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)";
+	    this.DB.query(sql);
+	    sql = "CREATE TABLE keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)";
+	    this.DB.query(sql);
+	} 
     },
     
     lyxGetDoc: function(){
-		var res;
-		var fre;
-		var fname
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-		res = this.lyxPipeWrite("server-get-filename");
-		if(!res) {
-		    win.alert("Could not contact server at: "+this.prefs.getCharPref("lyxserver"));
-		    return;
-		}
-		
-		res = this.lyxPipeRead();
-		fre = /.*server-get-filename:(.*)\n$/;
-		fname = fre.exec(res);
-		if (fname==null) {
-		    win.alert("ERROR: lyxGetDoc: "+res);
-		    return;
-		}
-		return fname[1];
+	var res, fre, fname;
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	res = this.lyxAskServer("server-get-filename");
+	if(!res) {
+	    win.alert("Could not contact server at: "+this.prefs.getCharPref("lyxserver"));
+	    return null;
+	}
+	
+	fre = /.*server-get-filename:(.*)\n$/;
+	fname = fre.exec(res);
+	if (fname==null) {
+	    win.alert("ERROR: lyxGetDoc: "+res);
+	    return null;
+	}
+	return fname[1];
     },
     
     lyxGetOpenDocs: function(){
-		var docs = new Array();
-		original = this.lyxGetDoc();
-		docs.push(original);
-		var name;
-		var go = true;
-		do {
-		    this.lyxPipeWrite("buffer-next");
-		    name = this.lyxGetDoc();
-		    if (original==name){
-			go = false;//not necessary
-			return docs;
-		    }
-		    docs.push(name);
-		} while (go);
-	    },
-	    
-	    lyxGetPos: function (){
-		this.lyxPipeWrite("server-get-xy");
-	        var res = this.lyxPipeRead();
-		xy = /INFO:lyz:server-get-xy:(.*)/.exec(res)[1];
-		return xy;
+	var docs = new Array();
+        var original = this.lyxGetDoc();
+	docs.push(original);
+	var name;
+	var go = true;
+	do {
+	    this.lyxAskServer("buffer-next");
+	    name = this.lyxGetDoc();
+	    if (original==name){
+		go = false;//not necessary
+		return docs;
+	    }
+	    docs.push(name);
+	} while (go);
+        return null;
     },
     
-//    lyxPipeRead: function(){
-//		// reading from lyxpipe.out
-//		var pipeout;
-//		var path;
-//		var pipeout_stream;
-//		var cstream;
-//		var data;
-//		var str;
-//		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-//	
-//		pipeout = Components.classes["@mozilla.org/file/local;1"]
-//		    .createInstance(Components.interfaces.nsILocalFile);
-//		path = this.prefs.getCharPref("lyxserver");
-//		pipeout.initWithPath(path+".out");
-//		if(!pipeout.exists()){
-//		    win.alert("The specified LyXServer pipe does not exist.");
-//		    return;
-//		}
-//		pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
-//	            createInstance(Components.interfaces.nsIFileInputStream);
-//		cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
-//		    createInstance(Components.interfaces.nsIConverterInputStream);
-//		pipeout_stream.init(pipeout, -1, 0, 0);
-//		cstream.init(pipeout_stream, "UTF-8", 0, 0);
-//		data = "";
-//		str = {};
-//		cstream.readString(-1, str); // read the whole file and put it in str.value
-//		data = str.value;
-//		cstream.close();
-//		return data;
-//    },
-//    
-//    lyxPipeWrite: function(command){
-//		// writing to lyxpipe.in
-//		var pipein;
-//		var pipein_stream;
-//		var msg;
-//		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-//	
-//		try {
-//		    pipein = Components.classes["@mozilla.org/file/local;1"]
-//			.createInstance(Components.interfaces.nsILocalFile);
-//		    pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
-//		} catch(e){
-//		    win.alert("Wrong path to Lyx server:\n"+this.prefs.getCharPref("lyxserver")+"\n"+e);
-//		    return false;
-//		}
-//	
-//		if(!pipein.exists()){
-//		    win.alert("Wrong path to Lyx server.\nSet the path specified in Lyx preferences.");
-//		    return false;
-//		}
-//		
-//		try {
-//		    pipein_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
-//			.createInstance(Components.interfaces.nsIFileOutputStream);
-//		    pipein_stream.init(pipein, 0x02| 0x10, 0666, 0); // write, append
-//		} catch(e){
-//		    win.alert("Failed to:\n"+command);
-//		    return;
-//		}
-//		
-//		msg = "LYXCMD:lyz:"+command+"\n";
-//		pipein_stream.write(msg, msg.length);
-//		pipein_stream.close();
-//		return true;
-//	},
-	    
+    lyxGetPos: function (){
+	var res = this.lyxAskServer("server-get-xy");
+	var xy = /INFO:lyz:server-get-xy:(.*)/.exec(res)[1];
+	return xy;
+    },
+    	    
     lyxPipeInit: function(){
-		// reading from lyxpipe.out
-		var pipeout;
-		var path;
-		var pipeout_stream;
-		var cstream;
-		var data;
-		var str;
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	// reading from lyxpipe.out
+	var pipeout;
+	var path;
+	var pipeout_stream;
+	var cstream;
+	var data;
+	var str;
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	
-		pipeout = Components.classes["@mozilla.org/file/local;1"]
-		    .createInstance(Components.interfaces.nsILocalFile);
-		path = this.prefs.getCharPref("lyxserver");
-		pipeout.initWithPath(path+".out");
-		if(!pipeout.exists()){
-		    win.alert("The specified LyXServer pipe does not exist.");
-		    return;
-		}
-		pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
-	            createInstance(Components.interfaces.nsIFileInputStream);
-		cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
-		    createInstance(Components.interfaces.nsIConverterInputStream);
-		pipeout_stream.init(pipeout, -1, 0, 0);
-		cstream.init(pipeout_stream, "UTF-8", 0, 0);
-		return cstream;
+	pipeout = Components.classes["@mozilla.org/file/local;1"]
+	    .createInstance(Components.interfaces.nsILocalFile);
+	path = this.prefs.getCharPref("lyxserver");
+	pipeout.initWithPath(path+".out");
+	if(!pipeout.exists()){
+	    win.alert("The specified LyXServer pipe does not exist.");
+	    return null;
+	}
+	pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+	    createInstance(Components.interfaces.nsIFileInputStream);
+	cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+	    createInstance(Components.interfaces.nsIConverterInputStream);
+	pipeout_stream.init(pipeout, -1, 0, 0);
+	cstream.init(pipeout_stream, "UTF-8", 0, 0);
+	return cstream;
     },
     
     lyxPipeWriteAndRead: function(command,cstream){
-		// writing to lyxpipe.in
-		var pipein;
-		var pipein_stream;
-		var msg;
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	// writing to lyxpipe.in
+	var pipein, pipein_stream, msg, str, data;
+        
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	
-		try {
-		    pipein = Components.classes["@mozilla.org/file/local;1"]
-			.createInstance(Components.interfaces.nsILocalFile);
-		    pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
-		} catch(e){
-		    win.alert("Wrong path to Lyx server:\n"+this.prefs.getCharPref("lyxserver")+"\n"+e);
-		    return false;
-		}
+	try {
+	    pipein = Components.classes["@mozilla.org/file/local;1"]
+		.createInstance(Components.interfaces.nsILocalFile);
+	    pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
+	} catch(e){
+	    win.alert("Wrong path to Lyx server:\n"+this.prefs.getCharPref("lyxserver")+"\n"+e);
+	    return false;
+	}
 	
-		if(!pipein.exists()){
-		    win.alert("Wrong path to Lyx server.\nSet the path specified in Lyx preferences.");
-		    return false;
-		}
-		
-		try {
-		    pipein_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
-			.createInstance(Components.interfaces.nsIFileOutputStream);
-		    pipein_stream.init(pipein, 0x02| 0x10, 0666, 0); // write, append
-		} catch(e){
-		    win.alert("Failed to:\n"+command);
-		    return;
-		}
-		
-		msg = "LYXCMD:lyz:"+command+"\n";
-		pipein_stream.write(msg, msg.length);
-		pipein_stream.close();
-		
-		data = "";
-		str = {};
-		cstream.readString(-1, str); // read the whole file and put it in str.value
-		data = str.value;
-		cstream.close();
-		return data;
-	},
+	if(!pipein.exists()){
+	    win.alert("Wrong path to Lyx server.\nSet the path specified in Lyx preferences.");
+	    return false;
+	}
+	
+	try {
+	    pipein_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+		.createInstance(Components.interfaces.nsIFileOutputStream);
+	    pipein_stream.init(pipein, 0x02| 0x10, 0666, 0); // write, append
+	} catch(e){
+	    win.alert("Failed to:\n"+command);
+	    return false;
+	}
+	
+	msg = "LYXCMD:lyz:"+command+"\n";
+	pipein_stream.write(msg, msg.length);
+	pipein_stream.close();
+	
+        data = "";
+	str = {};
+	cstream.readString(-1, str); // read the whole file and put it in str.value
+	data = str.value;
+	cstream.close();
+	return data;
+    },
+    
+    lyxAskServer: function(command){
+        var win = this.wm.getMostRecentWindow("navigator:browser"); 
+        try {
+            var cstream = this.lyxPipeInit();            
+        } catch (x) {
+            win.alert("SERVER ERROR:\n"+x);
+            return null;
+        }
+        try {
+            return this.lyxPipeWriteAndRead(command,cstream);    
+        } catch (x) {
+            win.alert("SERVER ERROR:\n"+x);
+            return null;
+        }
+    },
+
     settings: function (){ 
-		var params;
-		var inn;
-		var out;
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var params, inn, out;
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
 	
-	    	var params = {inn:{citekey:this.prefs.getCharPref("citekey"),
-	    			   lyxserver:this.prefs.getCharPref("lyxserver")},
-	    		      out:null};       
-	    	win.openDialog("chrome://lyz/content/settings.xul", "",
-	    			  "chrome, dialog, modal, centerscreen, resizable=yes", params);
-		
-	    	if (params.out) {
-	    	    // User clicked ok. Process changed arguments; e.g. write them to disk or whatever
-	    	    this.prefs.setCharPref("citekey",params.out.citekey);
-	    	    this.prefs.setCharPref("lyxserver",params.out.lyxserver);
-	    	}	
+	params = {inn:{
+                      citekey:this.prefs.getCharPref("citekey"),
+	    	      lyxserver:this.prefs.getCharPref("lyxserver")},
+	    	  out:null};       
+	win.openDialog("chrome://lyz/content/settings.xul", "",
+	    	       "chrome, dialog, modal, centerscreen, resizable=yes", params);
+	
+	if (params.out) {
+	    this.prefs.setCharPref("citekey",params.out.citekey);
+	    this.prefs.setCharPref("lyxserver",params.out.lyxserver);
+	}	
     },
     
     addNewDocument: function(doc,bib) {
@@ -233,286 +176,282 @@ Zotero.Lyz = {
 
     
     checkDocInDB: function(){
-		var doc;
-		var res;	
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-		doc = this.lyxGetDoc();
-		if (!doc) {win.alert("Could not retrieve document name."); return;}
-		res = this.DB.query("SELECT doc,bib FROM docs WHERE doc=\""+doc+"\"");
-		if (!res) return [res,doc];
-		return [res[0]['bib'],res[0]['doc']];
+	var doc, res;	
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	doc = this.lyxGetDoc();
+	if (!doc) {win.alert("Could not retrieve document name."); return null;}
+	res = this.DB.query("SELECT doc,bib FROM docs WHERE doc=\""+doc+"\"");
+	if (!res)
+            return [res,doc];
+	return [res[0]['bib'],res[0]['doc']];
     },
     
     checkAndCite: function(){
-		// export citation to Bibtex
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-		var zitems = win.ZoteroPane.getSelectedItems();
-		// FIXME: this should be called bellow, but it returns empty there (???)
-		if(!zitems.length){
-		    win.alert("Please select at least one citation.");
-		    return;
-		}
+	// export citation to Bibtex
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var zitems = win.ZoteroPane.getSelectedItems();
+	// FIXME: this should be called bellow, but it returns empty there (???)
+	if(!zitems.length){
+	    win.alert("Please select at least one citation.");
+	    return;
+	}
 	
-		// check document name
-		var res = this.checkDocInDB();
-		//win.alert("1");
-		var doc = res[1];
-		var bib = res[0];
-		var bib_file;
-		var items;
-		var keys;
-		var entries_text = "";
-		var citekey;
-		var text;
+	// check document name
+	var res = this.checkDocInDB();
+	//win.alert("1");
+	var doc = res[1];
+	var bib = res[0];
+	var bib_file;
+	var items;
+	var keys;
+	var entries_text = "";
+	var citekey;
+	var text;
 	
-		if (!bib) {
-		    t = "Press OK to create new BibTeX database.\n";
-		    t+= "Press Cancel to select from your existing databases\n";
-		    
-		    // FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
-		    // var check = { value: true };
-		    // var ifps = Components.interfaces.nsIPromptService;
-		    // var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
-		    // promptService = promptService.QueryInterface(ifps);
-		    // var res = confirm(t,"BibTex databse selection",
-		    // 		      ifps.STD_YES_NO_BUTTONS,null,null,null,"",check);
-		    var res = win.confirm(t,"BibTex database selection");
-		    if(res){
-			bib_file = this.dialog_FilePickerSave(win,"Select Bibtex file for "+doc,"Bibtex", "*.bib");
-			if (!bib_file) return;
-			
-		    } else {
-			bib_file = this.dialog_FilePickerOpen(win,"Select Bibtex file for "+doc,"Bibtex", "*.bib");
-			if(!bib_file) return;
-		    }
-		    
-		    bib = bib_file.path;
-		    if (bib_file) this.addNewDocument(doc,bib);
-		    else return;//file dialog canceled
-		}
-		//win.alert("2");
-		items = this.exportToBibtex(zitems,bib);
-		var keys = new Array();
-		var zids = new Array();
-		for (var zid in items){
-		    citekey = items[zid][0];
-		    text = items[zid][1];
-		    keys.push(citekey);
-		    //check database, if not in, append to entries_text
-		    //single key can be associated with several bibtex files
-		    var res = this.DB.query("SELECT key FROM keys WHERE bib=\""+bib+"\" AND zid=\""+zid+"\"");
-		    if(!res){
-			this.DB.query("INSERT INTO keys VALUES(null,\""+citekey+"\",\""+bib+"\",\""+zid+"\")");
-			zids.push(zid);
-			entries_text+=text;
-		    } else if (res[0]['key'] != citekey) {
-			var ask = win.confirm("Zotero record has been changed.\n"+
-					      "Press OK to run 'Update BibTeX' and insert the citation.\n"+
-					      "Press Cancel to refrain of any action.","Zotero record changed!");
-			if (ask){
-			    var xy = this.lyxGetPos();
-			    this.updateBibtexAll();
-	                    this.lyxPipeWrite("server-set-xy:"+xy);
-			} else {return;}
-		    }
-		}
-		if (!entries_text=="") this.writeBib(bib,entries_text,zids);
-		res = this.lyxPipeWrite("citation-insert:"+keys.join(","));
-		//win.alert("3");
+	if (!bib) {
+	    t = "Press OK to create new BibTeX database.\n";
+	    t+= "Press Cancel to select from your existing databases\n";
+	    
+	    // FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
+	    // var check = { value: true };
+	    // var ifps = Components.interfaces.nsIPromptService;
+	    // var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+	    // promptService = promptService.QueryInterface(ifps);
+	    // var res = confirm(t,"BibTex databse selection",
+	    // 		      ifps.STD_YES_NO_BUTTONS,null,null,null,"",check);
+	    var res = win.confirm(t,"BibTex database selection");
+	    if(res){
+		bib_file = this.dialog_FilePickerSave(win,"Select Bibtex file for "+doc,"Bibtex", "*.bib");
+		if (!bib_file) return;
+		
+	    } else {
+		bib_file = this.dialog_FilePickerOpen(win,"Select Bibtex file for "+doc,"Bibtex", "*.bib");
+		if(!bib_file) return;
+	    }
+	    
+	    bib = bib_file.path;
+	    if (bib_file) this.addNewDocument(doc,bib);
+	    else return;//file dialog canceled
+	}
+	//win.alert("2");
+	items = this.exportToBibtex(zitems,bib);
+	var keys = new Array();
+	var zids = new Array();
+	for (var zid in items){
+	    citekey = items[zid][0];
+	    text = items[zid][1];
+	    keys.push(citekey);
+	    //check database, if not in, append to entries_text
+	    //single key can be associated with several bibtex files
+	    var res = this.DB.query("SELECT key FROM keys WHERE bib=\""+bib+"\" AND zid=\""+zid+"\"");
+	    if(!res){
+		this.DB.query("INSERT INTO keys VALUES(null,\""+citekey+"\",\""+bib+"\",\""+zid+"\")");
+		zids.push(zid);
+		entries_text+=text;
+	    } else if (res[0]['key'] != citekey) {
+		var ask = win.confirm("Zotero record has been changed.\n"+
+				      "Press OK to run 'Update BibTeX' and insert the citation.\n"+
+				      "Press Cancel to refrain of any action.","Zotero record changed!");
+		if (ask){
+		    var xy = this.lyxGetPos();
+		    this.updateBibtexAll();
+	            this.lyxAskServer("server-set-xy:"+xy);
+		} else {return;}
+	    }
+	}
+	if (!entries_text=="") this.writeBib(bib,entries_text,zids);
+	res = this.lyxAskServer("citation-insert:"+keys.join(","));
+	//win.alert("3");
     },
     
     
     createCiteKey: function(id,text,bib){
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
-		var oldkey = ckre.exec(text)[1];
-		var dic = new Array();
-		dic["zotero"] = id;
-		if (this.prefs.getCharPref("citekey") == "zotero"){
-		    var citekey = id;
-		    text = text.replace(oldkey,citekey);
-		    return [citekey,text];
-		    return;
-		}
-		var creators;
-		var authors;
-		var author;
-		var c = "";
-		var chars = "";
-		var t;
-		var title;
-		var year;
-		var p;
-		var citekey = "";
-		var text;
-		
-		// NAME
-		ckre = /author\s?=\s?\{(.*)\},?\n/;
-		creators = ckre.exec(text);
-		if (!creators){
-		    ckre = /editor\s?=\s?\{(.*)\},?\n/;
-		    creators = ckre.exec(text);
-		}
-		authors = creators[1];
-		if (authors.split(" and ").length>1){
-		    author = authors.split(" and ")[0].split(" ");
-		    author = author[author.length-1].toLowerCase();
-		} else {
-		    author = authors.split(" ");
-		    author = author[author.length-1].toLowerCase();
-		}	
-	        // check for non-latin names, starting from where bibtex.js ends
-	        var non_latin;
-	        if (author[0].charCodeAt()>7929){
-	            non_latin = true;
-	            author = author.toSource().split("\\u")[1];
-	        }
-	        if (this.prefs.getBoolPref("use_utf8")==true){
-	            var tmp = ""
-	            for (var i in author){
-	                if (author[i] in mappingTable) tmp+=mappingTable[author[i]];
-	                else tmp+=author[i];
-	            }
-	            author = tmp;
-	        }
-		dic["author"] = author;
-		
-		// TITLE
-	        if (non_latin){
-	            title = "";
-	        } else {
-		    ckre = /title = \{(.*)\},\n/;
-		    t = ckre.exec(text)[1].toLowerCase();
-		    t = t.replace(/[^a-z0-9\s]/g,"");
-		    t = t.split(" ");
-		    t.reverse();
-		    title = t.pop();
-		    if (title<6){// the, a, on, about
-		        title += t.pop();
-		    }
-		    if (title.length<7){
-		        title+=t.pop();
-		    }
-		    // title's can contain commas, collons, e.g. "Godel, Escher, Bach: An Eternal Golden Braid",
-		    // which have to be removed. This is lame, FIXME: remove all non [a-zA-Z0-9].
-	        }
-		dic["title"] = title;
-		// YEAR
-		ckre = /.*year\s?=\s?\{(.*)\},?/;
-		try {
-		    year = ckre.exec(text)[1].replace(" ","");
-		} catch (e) {
-		    win.alert("All entries should to be dated. Please add a date to:\n"+text);
-		    year = "????";
-		}
-		dic["year"] = year;
-		// custom cite key
-		p = this.prefs.getCharPref("citekey").split(" ");
-		for (var i=0;i<p.length;i++){
-		    if (p[i] in dic) {citekey+=dic[p[i]];}
-		    else citekey+=p[i];
-		}
-	        //first remove diacritics,e.g. \v{s}imon
-	        re = /\\.\{/g;
-	        citekey = citekey.replace(re,"");
-		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
-		citekey = citekey.replace(re,"");
-		//check if cite key exists
-		var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=\""+bib+"\" AND key=\""+citekey+"\" AND zid<>\""+id+"\"");
-		if (res.length>0) citekey+=(res.length+1);
-		text = text.replace(oldkey,citekey);
-		return [citekey,text];
+	var win = this.wm.getMostRecentWindow("navigator:browser");
+	var ckre = /.*@[a-z]+\{([^,]+),{1}/;
+	var oldkey = ckre.exec(text)[1];
+	var dic = new Array();
+	dic["zotero"] = id;
+	if (this.prefs.getCharPref("citekey") == "zotero"){
+	    var citekey = id;
+	    text = text.replace(oldkey,citekey);
+	    return [citekey,text];
+	}
+	var creators;
+	var authors;
+	var author;
+	var c = "";
+	var chars = "";
+	var t;
+	var title;
+	var year;
+	var p;
+	var citekey = "";
+	
+	// NAME
+	ckre = /author\s?=\s?\{(.*)\},?\n/;
+	creators = ckre.exec(text);
+	if (!creators){
+	    ckre = /editor\s?=\s?\{(.*)\},?\n/;
+	    creators = ckre.exec(text);
+	}
+	authors = creators[1];
+	if (authors.split(" and ").length>1){
+	    author = authors.split(" and ")[0].split(" ");
+	    author = author[author.length-1].toLowerCase();
+	} else {
+	    author = authors.split(" ");
+	    author = author[author.length-1].toLowerCase();
+	}	
+	// check for non-latin names, starting from where bibtex.js ends
+	var non_latin;
+	if (author[0].charCodeAt()>7929){
+	    non_latin = true;
+	    author = author.toSource().split("\\u")[1];
+	}
+	if (this.prefs.getBoolPref("use_utf8")==true){
+	    var tmp = "";
+	    for (var i in author){
+	        if (author[i] in mappingTable) tmp+=mappingTable[author[i]];
+	        else tmp+=author[i];
+	    }
+	    author = tmp;
+	}
+	dic["author"] = author;
+	
+	// TITLE
+	if (non_latin){
+	    title = "";
+	} else {
+	    ckre = /title = \{(.*)\},\n/;
+	    t = ckre.exec(text)[1].toLowerCase();
+	    t = t.replace(/[^a-z0-9\s]/g,"");
+	    t = t.split(" ");
+	    t.reverse();
+	    title = t.pop();
+            // the if statement is there because of short titles, e.g. Ema
+	    if (title<6){// the, a, on, about
+                if (t.length>0) title += t.pop();
+	    }
+	    if (title.length<7){
+		if (t.length>0) title += t.pop();
+	    }
+	}
+	dic["title"] = title;
+	// YEAR
+	ckre = /.*year\s?=\s?\{(.*)\},?/;
+	try {
+	    year = ckre.exec(text)[1].replace(" ","");
+	} catch (e) {
+	    win.alert("All entries should to be dated. Please add a date to:\n"+text);
+	    year = "";
+	}
+	dic["year"] = year;
+	// custom cite key
+	p = this.prefs.getCharPref("citekey").split(" ");
+	for (var i=0;i<p.length;i++){
+	    if (p[i] in dic) {citekey+=dic[p[i]];}
+	    else citekey+=p[i];
+	}
+	var re = /\\.\{/g;
+	citekey = citekey.replace(re,"");
+	re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
+	citekey = citekey.replace(re,"");
+	//check if cite key exists
+	var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=\""+bib+"\" AND key=\""+citekey+"\" AND zid<>\""+id+"\"");
+	if (res.length>0) citekey+=(res.length+1);
+	text = text.replace(oldkey,citekey);
+	return [citekey,text];
     },
     
 
     exportToBibliography: function(item){
-		var format = "bibliography=http://www.zotero.org/styles/chicago-author-date";
-		var biblio = Zotero.QuickCopy.getContentFromItems([item],format);
-		return biblio.text;
-	    },
-	    
-	    exportToBibtex: function (items,bib){
-		// returns hash {id:[citekey,text]}
-		var text;
-		var callback = function(obj, worked) {
-		    text = obj.output.replace(/\r\n/g, "\n");
-		};
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var translation = new Zotero.Translate("export");
-		translation.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
-		
-		translation.setHandler("done", callback);
-		//FIXME: not sure why this works, set to anything and will escape all characters
-	        
-		if (this.prefs.getBoolPref("use_utf8")==false)
-	            translation.setDisplayOptions({"exportCharset":"\"UTF-8\""});
-		var tmp = new Array();
-		for (var i=0;i<items.length;i++){
-		    var id =Zotero.Items.getLibraryKeyHash(items[i]);
-		    translation.setItems([items[i]]);
-		    translation.translate();
-		    var ct = this.createCiteKey(id,text,bib);
-		    tmp[id] = [ct[0],ct[1]];
-		}
-		return tmp;
+	var format = "bibliography=http://www.zotero.org/styles/chicago-author-date";
+	var biblio = Zotero.QuickCopy.getContentFromItems([item],format);
+	return biblio.text;
+    },
+    
+    exportToBibtex: function (items,bib){
+	// returns hash {id:[citekey,text]}
+	var text;
+	var callback = function(obj, worked) {
+	    text = obj.output.replace(/\r\n/g, "\n");
+	};
+	var win = this.wm.getMostRecentWindow("navigator:browser");
+	var translation = new Zotero.Translate("export");
+	translation.setTranslator('9cb70025-a888-4a29-a210-93ec52da40d4');
+	
+	translation.setHandler("done", callback);
+	//FIXME: not sure why this works, set to anything and will escape all characters
+	
+	if (this.prefs.getBoolPref("use_utf8")==false)
+	    translation.setDisplayOptions({"exportCharset":"\"UTF-8\""});
+	var tmp = new Array();
+	for (var i=0;i<items.length;i++){
+	    var id =Zotero.Items.getLibraryKeyHash(items[i]);
+	    translation.setItems([items[i]]);
+	    translation.translate();
+	    var ct = this.createCiteKey(id,text,bib);
+	    tmp[id] = [ct[0],ct[1]];
+	}
+	return tmp;
     },
     
     dbDeleteBib: function(){
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-		var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
-		var params = {inn:{items:dic,type:"bib"},
-	    		      out:null};       
-	    	var res = win.openDialog("chrome://lyz/content/select.xul", "",
-	    		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-		if(!params.out) return;
-		var bib;
-	    	if (params.out) {
-		    bib = params.out.item;
-	    	}	
-		var res = win.confirm("You are about to delete record of BibTeX database:\n"+
-				      bib+"\nRecord about associated documents will also be deleted.\n",
-				      "Deleting LyZ database record");
-		if(!res) return;
-		this.DB.query("DELETE FROM docs WHERE bib=\""+bib+"\"");
-		this.DB.query("DELETE FROM keys WHERE bib=\""+bib+"\"");
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
+	var params = {inn:{items:dic,type:"bib"},
+	    	      out:null};       
+	var res = win.openDialog("chrome://lyz/content/select.xul", "",
+	    		         "chrome, dialog, modal, centerscreen, resizable=yes",params);
+	if(!params.out) return;
+	var bib;
+	if (params.out) {
+	    bib = params.out.item;
+	}	
+	var res = win.confirm("You are about to delete record of BibTeX database:\n"+
+			      bib+"\nRecord about associated documents will also be deleted.\n",
+			      "Deleting LyZ database record");
+	if(!res) return;
+	this.DB.query("DELETE FROM docs WHERE bib=\""+bib+"\"");
+	this.DB.query("DELETE FROM keys WHERE bib=\""+bib+"\"");
+    },
+	    
+    dbDeleteDoc: function(doc,bib){
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var dic = this.DB.query("SELECT doc FROM docs");
+	var params = {inn:{items:dic,type:"doc"},
+	    	      out:null};       
+	var res = win.openDialog("chrome://lyz/content/select.xul", "",
+	    		         "chrome, dialog, modal, centerscreen, resizable=yes",params);
+	if(!params.out) return;
+	
+	var doc;
+	if (params.out) {
+	    doc = params.out.item;
+	}	
+	var res = win.confirm("Do you really want to delete document:\n"+
+			      doc+"?","Deleting LyZ database record");
+	if(!res) return;
+	this.DB.query("DELETE FROM docs WHERE doc=\""+doc+"\"");
 	    },
 	    
-	    dbDeleteDoc: function(doc,bib){
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-		var dic = this.DB.query("SELECT doc FROM docs");
-		var params = {inn:{items:dic,type:"doc"},
-	    		      out:null};       
-	    	var res = win.openDialog("chrome://lyz/content/select.xul", "",
-	    		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-		if(!params.out) return;
-		
-		var doc;
-	    	if (params.out) {
-		    doc = params.out.item;
-	    	}	
-		var res = win.confirm("Do you really want to delete document:\n"+
-				      doc+"?","Deleting LyZ database record");
-		if(!res) return;
-		this.DB.query("DELETE FROM docs WHERE doc=\""+doc+"\"");
-	    },
-	    
-	    dbRenameDoc: function(){
-		var win = this.wm.getMostRecentWindow("navigator:browser"); 
-		var dic = this.DB.query("SELECT id,doc FROM docs");
-		var params = {inn:{items:dic,type:"doc"},
-	    		      out:null};       
-	    	var res = win.openDialog("chrome://lyz/content/select.xul", "",
-	    		       "chrome, dialog, modal, centerscreen, resizable=yes",params);
-		if (!params.out) return;
-		var doc;
-	    	if (params.out) {
-		    doc = params.out.item;
-	    	}	
-		var newfname = this.dialog_FilePickerOpen(win,"Select LyX document for "+doc,"LyX", "*.lyx").path;
-	        // have to replace \ with / on windows because lyxserver returns unix style paths
-	        newfname = newfname.replace(/\\/g,"/");
-		if(!newfname) return;
-		this.DB.query("UPDATE docs SET doc=\""+newfname+"\" WHERE doc=\""+doc+"\"");
+    dbRenameDoc: function(){
+	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+	var dic = this.DB.query("SELECT id,doc FROM docs");
+	var params = {inn:{items:dic,type:"doc"},
+	    	      out:null};       
+	var res = win.openDialog("chrome://lyz/content/select.xul", "",
+	    		         "chrome, dialog, modal, centerscreen, resizable=yes",params);
+	if (!params.out) return;
+	var doc;
+	if (params.out) {
+	    doc = params.out.item;
+	}	
+	var newfname = this.dialog_FilePickerOpen(win,"Select LyX document for "+doc,"LyX", "*.lyx").path;
+	// have to replace \ with / on windows because lyxserver returns unix style paths
+	newfname = newfname.replace(/\\/g,"/");
+	if(!newfname) return;
+	this.DB.query("UPDATE docs SET doc=\""+newfname+"\" WHERE doc=\""+doc+"\"");
     },
     
     dbRenameBib: function(){
@@ -534,13 +473,14 @@ Zotero.Lyz = {
     },
     
     syncBibtexKeyFormat: function(doc,oldkeys,newkeys){
+        var cstream, outstream, re, lyxfile, oldpath, tmpfile;
     	var win = this.wm.getMostRecentWindow("navigator:browser");
 	//this.lyxPipeWrite("buffer-write");
 	//this.lyxPipeWrite("buffer-close");	    
-    	var lyxfile = Components.classes["@mozilla.org/file/local;1"]
+    	lyxfile = Components.classes["@mozilla.org/file/local;1"]
     	    .createInstance(Components.interfaces.nsILocalFile);
 	// LyX returns linux style paths, which don't work on Windows
-	var oldpath = doc;
+	oldpath = doc;
 	try{
 	    lyxfile.initWithPath(doc);
 	}
@@ -554,7 +494,7 @@ Zotero.Lyz = {
     	}
 	//remove old backup file
 	try {
-	    var tmpfile = Components.classes["@mozilla.org/file/local;1"]
+	    tmpfile = Components.classes["@mozilla.org/file/local;1"]
     		.createInstance(Components.interfaces.nsILocalFile);
 	    tmpfile.initWithPath(doc+".lyz~");
     	    if(tmpfile.exists()){
@@ -680,7 +620,7 @@ Zotero.Lyz = {
 			      "\" WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
 	    }
 	    this.writeBib(bib,text,zids);
-	    var res = win.confirm("Your BibTeX database "+bib+" has been updated.\n"+
+	    res = win.confirm("Your BibTeX database "+bib+" has been updated.\n"+
 				  "Do you also want to update the associated LyX documents?\n"+
 				  "This is only necessary when any author, title or year has been modified,\n"
 				  +"or when the BibTex key format has been changed.");
@@ -688,11 +628,10 @@ Zotero.Lyz = {
 	    
 	    // var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
 	    // if (tmp.length==1){
-	    this.lyxPipeWrite("buffer-write");
-            this.pause(100);
-	    this.lyxPipeWrite("buffer-close");	    
+	    this.lyxAskServer("buffer-write");
+	    this.lyxAskServer("buffer-close");	    
 	    this.syncBibtexKeyFormat(doc,oldkeys,newkeys);
-	    this.lyxPipeWrite("file-open:"+doc);
+	    this.lyxAskServer("file-open:"+doc);
 	    // } else {
 	    // 	var docs = new Array();
 	    // 	var open_docs = this.lyxGetOpenDocs();
@@ -734,13 +673,13 @@ Zotero.Lyz = {
 	var info = "";
 	for (var i=0;i<ar.length;i++){
 	    var zid = ar[i];
-	    var res = this.DB.query("SELECT * FROM keys WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
+	    res = this.DB.query("SELECT * FROM keys WHERE zid=\""+zid+"\" AND bib=\""+bib+"\"");
 	    if(!res){
-		info+=zid+": "+this.exportToBibliography(this.getZoteroItem(zid))+"\n";
+              	info+=zid+": "+this.exportToBibliography(this.getZoteroItem(zid))+"\n";
 		// key=zid is not right, but it will be updated when updateBibtex is run
 		res = this.DB.query("INSERT INTO keys VALUES(null,\""+zid+"\",\""+bib+"\",\""+zid+"\")");
 		if (!res) {win.alert("ERROR: INSERT INTO keys VALUES(null,\""+zid+"\",\""+bib+"\",\""+zid+"\")");}
-	    }
+	    } 
 	}
 	
 	if (!info=="") win.alert("The following items where added:\n"+info);
@@ -761,6 +700,7 @@ Zotero.Lyz = {
 	if (res == nsIFilePicker.returnOK){
 	    return fp.file;
 	}
+        return null;
     },
 
     dialog_FilePickerSave: function(win,title,filter_title,filter){
@@ -847,31 +787,31 @@ Zotero.Lyz = {
         // when kile: disable all LyX functions
     },
     
-    test: function(){
-	var win = this.wm.getMostRecentWindow("navigator:browser"); 
-	var t = prompt("Command","server-get-filename");
-	if (!t) {
-	    win.alert("Error: !t");
-	    return;
-	}
-	this.lyxPipeWrite(t);
-	try {
-	    var t = this.lyxPipeRead();
-	    win.alert("RESPONSE: "+t);
-	} catch (e) {
-	    win.alert("Error connecting to lyxserver...\n"+e+"\nTrying again.");
-	    this.pause(1000);
-	    var t = this.lyxPipeRead();
-	    win.alert("RESPONSE: "+t);
-	}
-	win.alert("DONE");
-    },
+//     test: function(){
+// 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
+// 	var t = prompt("Command","server-get-filename");
+// 	if (!t) {
+// 	    win.alert("Error: !t");
+// 	    return;
+// 	}
+// //	this.lyxAskServer(t);
+// 	try {
+// 	    t = this.lyxAskServer();
+// 	    win.alert("RESPONSE: "+t);
+// 	} catch (e) {
+// 	    win.alert("Error connecting to lyxserver...\n"+e+"\nTrying again.");
+// 	    //this.pause(1000);
+// 	    t = this.lyxAskServer('server-get-filename');
+// 	    win.alert("RESPONSE: "+t);
+// 	}
+// 	win.alert("DONE");
+//     },
     
     pause: function(milliseconds){
 	var dt = new Date();
 	while ((new Date()) - dt <= milliseconds) { /* Do nothing */ }
     }
-}
+};
 
 var mappingTable = {
     "\u00A0":"~", // NO-BREAK SPACE
