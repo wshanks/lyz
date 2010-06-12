@@ -294,30 +294,41 @@ Zotero.Lyz = {
 	    ckre = /editor\s?=\s?\{(.*)\},?\n/;
 	    creators = ckre.exec(text);
 	}
-	authors = creators[1];
-	if (authors.split(" and ").length>1){
-	    author = authors.split(" and ")[0].split(" ");
-	    author = author[author.length-1].toLowerCase();
-	} else {
-	    author = authors.split(" ");
-	    author = author[author.length-1].toLowerCase();
-	}	
-	// check for non-latin names, starting from where bibtex.js ends
-	var non_latin;
-	if (author[0].charCodeAt()>7929){
-	    non_latin = true;
-	    author = author.toSource().split("\\u")[1];
-	}
-	if (this.prefs.getBoolPref("use_utf8")==true){
-	    var tmp = "";
-	    for (var i in author){
-	        if (author[i] in mappingTable) tmp+=mappingTable[author[i]];
-	        else tmp+=author[i];
+        try {
+            authors = creators[1];       
+        } catch (e) {
+            authors = null;
+        }
+
+        if (authors) {
+            
+	    if (authors.split(" and ").length>1){
+	        author = authors.split(" and ")[0].split(" ");
+	        author = author[author.length-1].toLowerCase();
+	    } else {
+	        author = authors.split(" ");
+	        author = author[author.length-1].toLowerCase();
+	    }	
+	    // check for non-latin names, starting from where bibtex.js ends
+	    var non_latin;
+	    if (author[0].charCodeAt()>7929){
+	        non_latin = true;
+	        author = author.toSource().split("\\u")[1];
 	    }
-	    author = tmp;
-	}
+	    if (this.prefs.getBoolPref("use_utf8")==true){
+	        var tmp = "";
+	        for (var i in author){
+	            if (author[i] in mappingTable) tmp+=mappingTable[author[i]];
+	            else tmp+=author[i];
+	        }
+	        author = tmp;
+	    }
+        } else {
+            author = "";
+        }
+
 	dic["author"] = author;
-	
+
 	// TITLE
 	if (non_latin){
 	    title = "";
@@ -352,6 +363,7 @@ Zotero.Lyz = {
 	    if (p[i] in dic) {citekey+=dic[p[i]];}
 	    else citekey+=p[i];
 	}
+
 	var re = /\\.\{/g;
 	citekey = citekey.replace(re,"");
 	re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
@@ -682,7 +694,7 @@ Zotero.Lyz = {
 	    } 
 	}
 	
-	if (!info=="") win.alert("The following items where added:\n"+info);
+	if (info!="") win.alert("The following items where added:\n"+info);
     },
     
     getZoteroItem: function(key){
