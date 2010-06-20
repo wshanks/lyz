@@ -468,7 +468,7 @@ Zotero.Lyz = {
     
     dbRenameBib: function(){
 	var win = this.wm.getMostRecentWindow("navigator:browser"); 
-	var dic = this.DB.query("SELECT bib FROM docs");
+	var dic = this.DB.query("SELECT DISTINCT bib FROM docs");
 	var params = {inn:{items:dic,type:"bib"},
     		      out:null};
     	var res = win.openDialog("chrome://lyz/content/select.xul", "",
