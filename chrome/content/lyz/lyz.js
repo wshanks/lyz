@@ -30,17 +30,16 @@ Zotero.Lyz = {
     lyxGetDoc: function(){
 		var res, fre, fname;
 		var win = this.wm.getMostRecentWindow("navigator:browser");
-		// TODO this should be async
 		res = this.lyxAskServer("server-get-filename");
 		if(!res) {
 			win.alert("Could not contact server at: "+this.prefs.getCharPref("lyxserver"));
 			return null;
 		}
 		
-		fre = /.*server-get-filename:(.*)\n$/;
+		fre = /.*INFO:lyz:server-get-filename:(.*)\n/;
 		fname = fre.exec(res);
 		if (fname==null) {
-			win.alert("ERROR: lyxGetDoc: "+res);
+			win.alert("ERROR: lyxGetDoc: \n\n"+res);
 			return null;
 		}
 		return fname[1];
@@ -97,7 +96,7 @@ Zotero.Lyz = {
 		return cstream;
     },
     
-    lyxPipeWriteAndRead: function(command,cstream){
+    lyxPipeWriteAndRead: function(command){
 		// writing to lyxpipe.in
 		var pipein, pipein_stream, msg, str, data;
 			
@@ -130,8 +129,25 @@ Zotero.Lyz = {
 		pipein_stream.write(msg, msg.length);
 		pipein_stream.close();
 		
-			data = "";
+		data = "";
 		str = {};
+		
+		// ----- open again
+		var pipeout = Components.classes["@mozilla.org/file/local;1"]
+			.createInstance(Components.interfaces.nsILocalFile);
+		var path = this.prefs.getCharPref("lyxserver");
+		pipeout.initWithPath(path+".out");
+		if(!pipeout.exists()){
+			win.alert("The specified LyXServer pipe does not exist.");
+			return null;
+		}
+		var pipeout_stream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+			createInstance(Components.interfaces.nsIFileInputStream);
+		var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+			createInstance(Components.interfaces.nsIConverterInputStream);
+		pipeout_stream.init(pipeout, -1, 0, 0);
+		cstream.init(pipeout_stream, "UTF-8", 0, 0);
+		
 		cstream.readString(-1, str); // read the whole file and put it in str.value
 		data = str.value;
 		cstream.close();
@@ -140,14 +156,14 @@ Zotero.Lyz = {
     
     lyxAskServer: function(command){
         var win = this.wm.getMostRecentWindow("navigator:browser");
+//        try {
+//        	var cstream = this.lyxPipeInit();
+//        } catch (x) {
+//            win.alert("SERVER ERROR:\n"+x);
+//            return null;
+//        }
         try {
-            var cstream = this.lyxPipeInit();            
-        } catch (x) {
-            win.alert("SERVER ERROR:\n"+x);
-            return null;
-        }
-        try {
-            return this.lyxPipeWriteAndRead(command,cstream);    
+        	return this.lyxPipeWriteAndRead(command);    
         } catch (x) {
             win.alert("SERVER ERROR:\n"+x);
             return null;
@@ -181,11 +197,14 @@ Zotero.Lyz = {
 		var doc, res;	
 		var win = this.wm.getMostRecentWindow("navigator:browser"); 
 		doc = this.lyxGetDoc();
+		//win.alert("DOC: "+doc);
 		if (!doc) {win.alert("Could not retrieve document name."); return null;}
 		res = this.DB.query("SELECT doc,bib FROM docs WHERE doc=\""+doc+"\"");
-		if (!res)
-				return [res,doc];
-		return [res[0]['bib'],res[0]['doc']];
+		//win.alert(res+"\n"+doc+"\n"+res[0]['bib']+"\n"+res[0]['doc']);
+		if (!res) {
+			return [res,doc];
+		}
+		return [res[0]['bib'],doc];
     },
     
     checkAndCite: function(){
@@ -201,8 +220,8 @@ Zotero.Lyz = {
 		// check document name
 		var res = this.checkDocInDB();
 		
-		var doc = res[1];
 		var bib = res[0];
+		var doc = res[1];
 		var bib_file;
 		var items;
 		var keys;
