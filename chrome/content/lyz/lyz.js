@@ -166,7 +166,7 @@ Zotero.Lyz = {
         	return this.lyxPipeWriteAndRead(command);    
         } catch (x) {
             win.alert("SERVER ERROR:\n"+x);
-            return null;
+            return False;
         }
         return True;
     },
@@ -219,7 +219,6 @@ Zotero.Lyz = {
 	
 		// check document name
 		var res = this.checkDocInDB();
-		
 		var bib = res[0];
 		var doc = res[1];
 		var bib_file;
@@ -413,10 +412,15 @@ Zotero.Lyz = {
 		// returns hash {id:[citekey,text]}
     	var win = this.wm.getMostRecentWindow("navigator:browser");
 		var text;
+		
 		var callback = function(obj, worked) {
 			// FIXME: the Zotero API has changed from obj.output
-			text = obj.string;//.replace(/\r\n/g, "\n");
+			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
+			if (!text){// this is for Zotero 2.0.9
+				text=obj.output.replace(/\r\n/g, "\n");
+			}
 		};
+		
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 
 		var translation = new Zotero.Translate("export");
