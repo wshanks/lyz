@@ -1,4 +1,5 @@
 content	lyz	chrome/content/lyz/
 locale	lyz	en-US				chrome/locale/en-US/lyz/
 skin	lyz	default	chrome/skin/default/lyz/
+overlay chrome://zotero/content/zoteroPane.xul chrome://lyz/content/overlay.xul
 overlay	chrome://browser/content/browser.xul	chrome://lyz/content/overlay.xul
