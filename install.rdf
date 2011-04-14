@@ -4,7 +4,7 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>lyz@zotero.org</em:id>
-    <em:version>2.0.2</em:version>
+    <em:version>2.1.0</em:version>
     <em:type>2</em:type>
    
     <!-- Target Application this extension can install into, 
@@ -19,7 +19,7 @@
     <!-- Front End MetaData -->
     <em:name>LyZ</em:name>
     <em:description>LyX integration plugin.</em:description>
-    <em:creator>Petr Simon</em:creator>
+    <em:creator>Petr Šimon</em:creator>
     <em:homepageURL>http://www.klubko.net</em:homepageURL>
   </Description>      
 </RDF>

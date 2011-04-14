@@ -11,12 +11,23 @@
     <columns><column/><column/></columns>
     <rows>
       <row align="center">
-	<label value="Lyx Server"/><textbox id="lyxserver"/>
+	<label value="Lyx Server"/>
+        <textbox id="lyxserver"/>
       </row>
       <row align="center">
 	<label value="Cite Key"/>
 	<textbox id="citekey"/>
       </row>
+      <row align="center">
+	<label value="Possible keywords:"/>
+	<label value="author year title zotero writer2latex"/>
+      </row>
+      <row align="center">
+	<label value="Export format (translator)"/>
+        <menulist id="format-menu">
+          <menupopup id="format-popup"/>
+        </menulist>
+      </row>      
     </rows>
   </grid>
 </dialog>
