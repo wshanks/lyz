@@ -1,3 +1,4 @@
+// revision 73
 {
 	"translatorID":"BibTeX-LyZ",
 	"translatorType":3,
@@ -1899,7 +1900,7 @@ var citeKeyConversions = {
                 return date.year;
             }
         }
-        return "????";
+        return item.date;//"????";
     }
 }
 
@@ -2042,6 +2043,10 @@ function doExport() {
 			}
 			if(date.year) {
 				writeField("year", date.year);
+			}
+			// fix for "in press" etc.
+			else {
+				writeField("year",item.date);
 			}
 		}
 		
