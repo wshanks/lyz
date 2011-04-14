@@ -197,10 +197,8 @@ Zotero.Lyz = {
 		var doc, res;	
 		var win = this.wm.getMostRecentWindow("navigator:browser"); 
 		doc = this.lyxGetDoc();
-		//win.alert("DOC: "+doc);
 		if (!doc) {win.alert("Could not retrieve document name."); return null;}
 		res = this.DB.query("SELECT doc,bib FROM docs WHERE doc=\""+doc+"\"");
-		//win.alert(res+"\n"+doc+"\n"+res[0]['bib']+"\n"+res[0]['doc']);
 		if (!res) {
 			return [res,doc];
 		}
