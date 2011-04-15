@@ -776,7 +776,7 @@ Zotero.Lyz = {
 							+ "or when the BibTex key format has been changed.");
 			if (!res)
 				return;
-
+			// FIXME test again updating of all document associated with current bib
 			// var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
 			// if (tmp.length==1){
 			this.lyxAskServer("buffer-write");
@@ -811,9 +811,7 @@ Zotero.Lyz = {
 		var doc = res[1];
 		var bib = res[0];
 		if (!bib) {
-			win
-					.alert("There is no BibTeX database associated with the active LyX document: "
-							+ doc);
+			win.alert("There is no BibTeX database associated with the active LyX document: "+ doc);
 			return;
 		}
 		var cstream = this.fileReadByLine(bib);
@@ -822,16 +820,18 @@ Zotero.Lyz = {
 		line = line.value;
 		cstream.close();
 		var ar = line.trim().split(" ");
-		var info = "";
+		var info = 0;
 		for ( var i = 0; i < ar.length; i++) {
 			var zid = ar[i];
 			res = this.DB.query("SELECT * FROM keys WHERE zid=\"" + zid
 					+ "\" AND bib=\"" + bib + "\"");
 
 			if (!res) {
-				info += zid + ": "
+				/*info += zid + ": "
 						+ this.exportToBibliography(this.getZoteroItem(zid))
 						+ "\n";
+						*/
+				info+=1;
 				// key=zid is not right, but it will be updated when updateBibtex is run
 				res = this.DB.query("INSERT INTO keys VALUES(null,\"" + zid
 						+ "\",\"" + bib + "\",\"" + zid + "\")");
@@ -841,8 +841,8 @@ Zotero.Lyz = {
 				}
 			}
 		}
-		if (info != "")
-			win.alert("The following items where added:\n" + info);
+		if (info > 0)
+			win.alert(info + " were items where added.");
 	},
 
 	getZoteroItem : function(key) {
