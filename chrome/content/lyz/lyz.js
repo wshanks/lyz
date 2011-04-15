@@ -362,22 +362,22 @@ Zotero.Lyz = {
 				author = authors.split(" ");
 				author = author[author.length - 1].toLowerCase();
 			}
-			// check for non-latin names, starting from where bibtex.js ends
+			// check for non-latin names
 			var non_latin;
 			if (author[0].charCodeAt() > 7929) {
 				non_latin = true;
 				author = author.toSource().split("\\u")[1];
 			}
-			if (this.prefs.getBoolPref("use_utf8") == true) {
-				var tmp = "";
-				for ( var i in author) {
-					if (author[i] in mappingTable)
-						tmp += mappingTable[author[i]];
-					else
-						tmp += author[i];
-				}
-				author = tmp;
+			
+			var tmp = "";
+			for ( var i in author) {
+				if (author[i] in mappingTable)
+					tmp += mappingTable[author[i]];
+				else
+					tmp += author[i];
 			}
+			author = tmp;
+
 		} else {
 			author = "";
 		}
@@ -463,10 +463,13 @@ Zotero.Lyz = {
 		translation.setTranslator(translatorID);
 		translation.setHandler("done", callback);
 		//FIXME: not sure why this works, set to anything and will escape all characters
-		if (this.prefs.getBoolPref("use_utf8") == true)
-			translation.setDisplayOptions({
-				"exportCharset" : "\"UTF-8\""
-			});
+		
+		if (this.prefs.getBoolPref("use_utf8")){
+			translation.setDisplayOptions({"exportCharset" : "UTF-8"});
+		} else {
+			translation.setDisplayOptions({"exportCharset" : "escape"});
+		}
+		
 
 		var tmp = new Array();
 		for ( var i = 0; i < items.length; i++) {
