@@ -11,16 +11,22 @@
     <columns><column/><column/></columns>
     <rows>
       <row align="center">
-	<label value="Lyx Server"/>
-        <textbox id="lyxserver"/>
+      	<label value="Lyx Server"/>
+      	<textbox id="lyxserver"/>
+     </row>
+     
+     <row align="center">
+		<label value="Create cite key?"/>
+		<checkbox id="createcitekey" onclick="enableCiteKey();"/>
       </row>
+      
       <row align="center">
-	<label value="Cite Key"/>
-	<textbox id="citekey"/>
+		<label value="Cite Key"/><textbox id="citekey" disabled="false" />
       </row>
+     
       <row align="center">
-	<label value="Possible keywords:"/>
-	<label value="author year title zotero writer2latex"/>
+		<label value="Possible keywords:"/>
+		<label value="author year title zotero zoteroShort"/>
       </row>
       <row align="center">
 	<label value="Export format (translator)"/>

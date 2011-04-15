@@ -159,19 +159,14 @@ Zotero.Lyz = {
 
 	lyxAskServer : function(command) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
-		//        try {
-		//        	var cstream = this.lyxPipeInit();
-		//        } catch (x) {
-		//            win.alert("SERVER ERROR:\n"+x);
-		//            return null;
-		//        }
+
 		try {
 			return this.lyxPipeWriteAndRead(command);
 		} catch (x) {
 			win.alert("SERVER ERROR:\n" + x);
-			return False;
+			return false;
 		}
-		return True;
+		return true;
 	},
 
 	settings : function() {
@@ -182,6 +177,7 @@ Zotero.Lyz = {
 		params = {
 			inn : {
 				citekey : this.prefs.getCharPref("citekey"),
+				createcitekey: this.prefs.getBoolPref("createCiteKey"),
 				lyxserver : this.prefs.getCharPref("lyxserver"),
 				selectedTranslator:this.prefs.getCharPref("selectedTranslator"),
                 translators:translators
@@ -194,6 +190,7 @@ Zotero.Lyz = {
 		if (params.out) {
 			this.prefs.setCharPref("citekey", params.out.citekey);
 			this.prefs.setCharPref("lyxserver", params.out.lyxserver);
+			this.prefs.setBoolPref("createCiteKey", params.out.createcitekey);
 			this.prefs.setCharPref("selectedTranslator",params.out.selectedTranslator);
 		}
 	},
@@ -239,7 +236,6 @@ Zotero.Lyz = {
 		var entries_text = "";
 		var citekey;
 		var text;
-
 		if (!bib) {
 			t = "Press OK to create new BibTeX database.\n";
 			t += "Press Cancel to select from your existing databases\n";
@@ -294,9 +290,10 @@ Zotero.Lyz = {
 						.confirm(
 								"Zotero record has been changed.\n"
 										+ "Press OK to run 'Update BibTeX' and insert the citation.\n"
-										+ "Press Cancel to refrain of any action.",
+										+ "Press Cancel to refrain from any action.",
 								"Zotero record changed!");
 				if (ask) {
+					// FIXME: started to act weird
 					var xy = this.lyxGetPos();
 					this.updateBibtexAll();
 					this.lyxAskServer("server-set-xy:" + xy);
@@ -326,7 +323,7 @@ Zotero.Lyz = {
 			return [ citekey, text ];
 		}
 		
-		else if (this.prefs.getCharPref("citekey") == "writer2latex"){
+		else if (this.prefs.getCharPref("citekey") == "zoteroShort"){
 		    var citekey = obj_key;
 		    text = text.replace(oldkey,citekey);
 		    return [citekey,text];
@@ -466,7 +463,7 @@ Zotero.Lyz = {
 		translation.setTranslator(translatorID);
 		translation.setHandler("done", callback);
 		//FIXME: not sure why this works, set to anything and will escape all characters
-		if (this.prefs.getBoolPref("use_utf8") == false)
+		if (this.prefs.getBoolPref("use_utf8") == true)
 			translation.setDisplayOptions({
 				"exportCharset" : "\"UTF-8\""
 			});
@@ -476,7 +473,15 @@ Zotero.Lyz = {
 			var id = Zotero.Items.getLibraryKeyHash(items[i]);
 			translation.setItems([ items[i] ]);
 			translation.translate();
-			var ct = this.createCiteKey(id, text, bib,item[i].key);
+			var ct;
+			if (this.prefs.getBoolPref("createCiteKey")==true){
+				ct = this.createCiteKey(id, text, bib, items[i].key);
+			} else {
+				var ckre = /.*@[a-z]+\{([^,]+),{1}/;
+				var key = ckre.exec(text)[1];
+				ct = [key, text];
+			}
+			
 			tmp[id] = [ ct[0], ct[1] ];
 		}
 
@@ -716,8 +721,7 @@ Zotero.Lyz = {
 		var doc = res[1];
 		var bib = res[0];
 		if (!bib) {
-			win
-					.alert("There is no BibTeX database associated with the active LyX document: "
+			win.alert("There is no BibTeX database associated with the active LyX document: "
 							+ doc);
 			return;
 		}
@@ -1027,10 +1031,7 @@ Zotero.Lyz = {
 			win.alert("RESPONSE: " + t);
 		} catch (e) {
 			win.alert("Error connecting to lyxserver...\n" + e
-					+ "\nTrying again.");
-			//this.pause(1000);
-			t = this.lyxAskServer('server-get-filename');
-			win.alert("RESPONSE: " + t);
+					+ "\nTry again.");
 		}
 		win.alert("DONE");
 	},

@@ -38,7 +38,7 @@
 			oncommand="Zotero.Lyz.settings()"/>
 	      <menuseparator />
 	      <menuitem id="lyz-test"
-	      		label="Test..."
+	      		label="LyX command..."
 	      		oncommand="Zotero.Lyz.test()"/>
 	    </menupopup>
 	  </toolbarbutton>  
