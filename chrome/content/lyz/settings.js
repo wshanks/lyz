@@ -55,3 +55,4 @@ function enableCiteKey(){
 		document.getElementById("citekey").disabled = true;
 	}
 }
+
