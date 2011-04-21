@@ -7,12 +7,23 @@ Zotero.Lyz = {
 	DB : null,
 	replace : false,
 	wm : null,
+	os: null,
 
 	init : function() {
 		//set up preferences
 		this.prefs = Components.classes["@mozilla.org/preferences-service;1"]
 				.getService(Components.interfaces.nsIPrefService);
 		this.prefs = this.prefs.getBranch("extensions.lyz.");
+		this.os = this.prefs.getCharPref("os");
+		
+		if (this.os == ""){
+			if (navigator.platform.indexOf("Win")==0){
+				this.os = "Win";
+			} else {// assuming this works also for MacOS better
+				this.os = "Linux";
+			}
+			this.prefs.setCharPref("os", this.os);
+		}
 
 		this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
 				.getService(Components.interfaces.nsIWindowMediator);
@@ -30,7 +41,11 @@ Zotero.Lyz = {
 	lyxGetDoc : function() {
 		var res, fre, fname;
 		var win = this.wm.getMostRecentWindow("navigator:browser");
-		res = this.lyxAskServer("server-get-filename");
+		if (this.os=="Win"){
+			res = this.lyxAskServer("server-get-filename");
+		} else {
+			res = this._lyxAskServer("server-get-filename");
+		}
 		if (!res) {
 			win.alert("Could not contact server at: "
 					+ this.prefs.getCharPref("lyxserver"));
@@ -53,7 +68,11 @@ Zotero.Lyz = {
 		var name;
 		var go = true;
 		do {
-			this.lyxAskServer("buffer-next");
+			if (this.os=="Win"){
+				res = this.lyxAskServer("buffer-next");
+			} else {
+				res = this._lyxAskServer("buffer-next");
+			}
 			name = this.lyxGetDoc();
 			if (original == name) {
 				go = false;//not necessary
@@ -65,7 +84,11 @@ Zotero.Lyz = {
 	},
 
 	lyxGetPos : function() {
-		var res = this.lyxAskServer("server-get-xy");
+		if (this.os=="Win"){
+			res = this.lyxAskServer("server-get-xy");
+		} else {
+			res = this._lyxAskServer("server-get-xy");
+		}
 		var xy = /INFO:lyz:server-get-xy:(.*)/.exec(res)[1];
 		return xy;
 	},
@@ -97,7 +120,12 @@ Zotero.Lyz = {
 		return cstream;
 	},
 
+	/*
+	 * FIXME: two version of lyxPipeWriteRead and lyxAskServer, one combo works in Linux other in Windows
+	 * Problem: I don't know why.
+	 */
 	lyxPipeWriteAndRead : function(command) {
+		// Works in Windows
 		// writing to lyxpipe.in
 		var pipein, pipein_stream, msg, str, data;
 
@@ -156,8 +184,9 @@ Zotero.Lyz = {
 		cstream.close();
 		return data;
 	},
-
+	
 	lyxAskServer : function(command) {
+		// Works in Windows
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 
 		try {
@@ -168,6 +197,66 @@ Zotero.Lyz = {
 		}
 		return true;
 	},
+	
+	_lyxPipeWriteAndRead: function(command,cstream){
+		// Works in Linux 
+		// writing to lyxpipe.in
+		var pipein, pipein_stream, msg, str, data;
+			
+		var win = this.wm.getMostRecentWindow("navigator:browser"); 
+		
+		try {
+			pipein = Components.classes["@mozilla.org/file/local;1"]
+			.createInstance(Components.interfaces.nsILocalFile);
+			pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
+		} catch(e){
+			win.alert("Wrong path to Lyx server:\n"+this.prefs.getCharPref("lyxserver")+"\n"+e);
+			return false;
+		}
+		
+		if(!pipein.exists()){
+			win.alert("Wrong path to Lyx server.\nSet the path specified in Lyx preferences.");
+			return false;
+		}
+		
+		try {
+			pipein_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+			.createInstance(Components.interfaces.nsIFileOutputStream);
+			pipein_stream.init(pipein, 0x02| 0x10, 0666, 0); // write, append
+		} catch(e){
+			win.alert("Failed to:\n"+command);
+			return false;
+		}
+		
+		msg = "LYXCMD:lyz:"+command+"\n";
+		pipein_stream.write(msg, msg.length);
+		pipein_stream.close();
+		
+			data = "";
+		str = {};
+		cstream.readString(-1, str); // read the whole file and put it in str.value
+		data = str.value;
+		cstream.close();
+		return data;
+    },
+    
+    _lyxAskServer: function(command){
+    	// Works in Linux
+        var win = this.wm.getMostRecentWindow("navigator:browser");
+        try {
+            var cstream = this.lyxPipeInit();            
+        } catch (x) {
+            win.alert("SERVER ERROR:\n"+x);
+            return null;
+        }
+        try {
+            return this._lyxPipeWriteAndRead(command,cstream);    
+        } catch (x) {
+            win.alert("SERVER ERROR:\n"+x);
+            return null;
+        }
+        return True;
+    },
 
 	settings : function() {
 		var params, inn, out;
@@ -296,7 +385,11 @@ Zotero.Lyz = {
 					// FIXME: started to act weird
 					var xy = this.lyxGetPos();
 					this.updateBibtexAll();
-					this.lyxAskServer("server-set-xy:" + xy);
+					if (this.os == "Win"){
+						this.lyxAskServer("server-set-xy:" + xy);
+					} else {
+						this._lyxAskServer("server-set-xy:" + xy);
+					}
 				} else {
 					return;
 				}
@@ -305,8 +398,13 @@ Zotero.Lyz = {
 		if (!entries_text == "") {
 			this.writeBib(bib, entries_text, zids);
 		}
-
-		res = this.lyxAskServer("citation-insert:" + keys.join(","));
+		
+		if (this.os == "Win"){
+			res = this.lyxAskServer("citation-insert:" + keys.join(","));
+		} else {
+			res = this._lyxAskServer("citation-insert:" + keys.join(","));
+		}
+		
 
 	},
 
@@ -779,10 +877,21 @@ Zotero.Lyz = {
 			// FIXME test again updating of all document associated with current bib
 			// var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
 			// if (tmp.length==1){
-			this.lyxAskServer("buffer-write");
-			this.lyxAskServer("buffer-close");
+			if (this.os == "Win"){
+				this.lyxAskServer("buffer-write");
+				this.lyxAskServer("buffer-close");
+			} else {
+				this._lyxAskServer("buffer-write");
+				this._lyxAskServer("buffer-close");
+			}
+			
 			this.syncBibtexKeyFormat(doc, oldkeys, newkeys);
-			this.lyxAskServer("file-open:" + doc);
+			if (this.os == "Win"){
+				this.lyxAskServer("file-open:" + doc);
+			} else {
+				this._lyxAskServer("file-open:" + doc);
+			}
+			
 			// } else {
 			// 	var docs = new Array();
 			// 	var open_docs = this.lyxGetOpenDocs();
@@ -1030,7 +1139,11 @@ Zotero.Lyz = {
 		}
 		//	this.lyxAskServer(t);
 		try {
-			t = this.lyxAskServer(t);
+			if (this.os == "Win"){
+				t = this.lyxAskServer(t);
+			} else {
+				t = this._lyxAskServer(t);
+			}
 			win.alert("RESPONSE: " + t);
 		} catch (e) {
 			win.alert("Error connecting to lyxserver...\n" + e
