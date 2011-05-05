@@ -285,8 +285,7 @@ Zotero.Lyz = {
 	},
 
 	addNewDocument : function(doc, bib) {
-		this.DB.query("INSERT INTO docs (doc,bib) VALUES(\"" + doc + "\",\""
-				+ bib + "\")");
+		this.DB.query("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
 	},
 
 	checkDocInDB : function() {
@@ -297,8 +296,7 @@ Zotero.Lyz = {
 			win.alert("Could not retrieve document name.");
 			return null;
 		}
-		res = this.DB.query("SELECT doc,bib FROM docs WHERE doc=\"" + doc
-				+ "\"");
+		res = this.DB.query("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
 		if (!res) {
 			return [ res, doc ];
 		}
@@ -366,12 +364,10 @@ Zotero.Lyz = {
 			keys.push(citekey);
 			//check database, if not in, append to entries_text
 			//single key can be associated with several bibtex files
+			var res = this.DB.query("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
 
-			var res = this.DB.query("SELECT key FROM keys WHERE bib=\"" + bib
-					+ "\" AND zid=\"" + zid + "\"");
 			if (!res) {
-				this.DB.query("INSERT INTO keys VALUES(null,\"" + citekey
-						+ "\",\"" + bib + "\",\"" + zid + "\")");
+				this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
 				zids.push(zid);
 				entries_text += text;
 			} else if (res[0]['key'] != citekey) {
@@ -526,8 +522,7 @@ Zotero.Lyz = {
 		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
 		citekey = citekey.replace(re, "");
 		//check if cite key exists
-		var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=\"" + bib
-				+ "\" AND key=\"" + citekey + "\" AND zid<>\"" + id + "\"");
+		var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
 		if (res.length > 0)
 			citekey += (res.length + 1);
 		text = text.replace(oldkey, citekey);
@@ -615,8 +610,8 @@ Zotero.Lyz = {
 						"Deleting LyZ database record");
 		if (!res)
 			return;
-		this.DB.query("DELETE FROM docs WHERE bib=\"" + bib + "\"");
-		this.DB.query("DELETE FROM keys WHERE bib=\"" + bib + "\"");
+		this.DB.query("DELETE FROM docs WHERE bib=?",[bib]);
+		this.DB.query("DELETE FROM keys WHERE bib=?",[bib]);
 	},
 
 	dbDeleteDoc : function(doc, bib) {
@@ -642,7 +637,7 @@ Zotero.Lyz = {
 				+ "?", "Deleting LyZ database record");
 		if (!res)
 			return;
-		this.DB.query("DELETE FROM docs WHERE doc=\"" + doc + "\"");
+		this.DB.query("DELETE FROM docs WHERE doc=?",[doc]);
 	},
 
 	dbRenameDoc : function() {
@@ -669,8 +664,7 @@ Zotero.Lyz = {
 		newfname = newfname.replace(/\\/g, "/");
 		if (!newfname)
 			return;
-		this.DB.query("UPDATE docs SET doc=\"" + newfname + "\" WHERE doc=\""
-				+ doc + "\"");
+		this.DB.query("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
 	},
 
 	dbRenameBib : function() {
@@ -695,10 +689,8 @@ Zotero.Lyz = {
 				+ bib, "Bibtex", "*.bib").path;
 		if (!newfname)
 			return;
-		this.DB.query("UPDATE docs SET bib=\"" + newfname + "\" WHERE bib=\""
-				+ bib + "\"");
-		this.DB.query("UPDATE keys SET bib=\"" + newfname + "\" WHERE bib=\""
-				+ bib + "\"");
+		this.DB.query("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
+		this.DB.query("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
 	},
 
 	syncBibtexKeyFormat : function(doc, oldkeys, newkeys) {
@@ -833,8 +825,7 @@ Zotero.Lyz = {
 				+ "\" will be used.\nDo you want to continue?");
 		if (p) {
 			// get all ids for the bibtex file
-			var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=\""
-					+ bib + "\" GROUP BY zid");
+			var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
 			var ids = new Array();
 			var oldkeys = new Array();
 			for ( var i = 0; i < ids_h.length; i++) {
@@ -860,9 +851,7 @@ Zotero.Lyz = {
 
 			// now is time to update db, bibtex and lyx
 			for ( var zid in newkeys) {
-				this.DB.query("UPDATE keys SET key=\"" + newkeys[zid]
-						+ "\" WHERE zid=\"" + zid + "\" AND bib=\"" + bib
-						+ "\"");
+				this.DB.query("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
 			}
 			this.writeBib(bib, text, zids);
 			res = win
@@ -932,8 +921,7 @@ Zotero.Lyz = {
 		var info = 0;
 		for ( var i = 0; i < ar.length; i++) {
 			var zid = ar[i];
-			res = this.DB.query("SELECT * FROM keys WHERE zid=\"" + zid
-					+ "\" AND bib=\"" + bib + "\"");
+			res = this.DB.query("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
 
 			if (!res) {
 				/*info += zid + ": "
@@ -942,12 +930,12 @@ Zotero.Lyz = {
 						*/
 				info+=1;
 				// key=zid is not right, but it will be updated when updateBibtex is run
-				res = this.DB.query("INSERT INTO keys VALUES(null,\"" + zid
-						+ "\",\"" + bib + "\",\"" + zid + "\")");
+				res = this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
 				if (!res) {
 					win.alert("ERROR: INSERT INTO keys VALUES(null,\"" + zid
 							+ "\",\"" + bib + "\",\"" + zid + "\")");
 				}
+
 			}
 		}
 		if (info > 0)
