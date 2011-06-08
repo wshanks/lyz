@@ -448,13 +448,12 @@ Zotero.Lyz = {
 		}
 
 		if (authors) {
-
 			if (authors.split(" and ").length > 1) {
-				author = authors.split(" and ")[0].split(" ");
-				author = author[author.length - 1].toLowerCase();
+				author = authors.split(" and ")[0].split(",");
+				author = author[0].toLowerCase();
 			} else {
-				author = authors.split(" ");
-				author = author[author.length - 1].toLowerCase();
+				author = authors.split(",");
+				author = author[0].toLowerCase();
 			}
 			// check for non-latin names
 			var non_latin;
