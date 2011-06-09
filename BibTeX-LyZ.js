@@ -81,7 +81,8 @@ var inputFieldMap = {
 	booktitle :"publicationTitle",
 	school:"publisher",
 	institution:"publisher",
-	publisher:"publisher"
+	publisher:"publisher",
+	issue:"issue"
 };
 
 var zotero2bibtexTypeMap = {
@@ -115,7 +116,8 @@ var bibtex2zoteroTypeMap = {
 	"manual":"book",
 	"mastersthesis":"thesis",
 	"misc":"book",
-	"proceedings":"book"
+	"proceedings":"book",
+	"collection":"book"
 };
 
 /*
@@ -1734,6 +1736,7 @@ function beginRecord(type, closeChar) {
 		var zoteroType = bibtex2zoteroTypeMap[type];
 		if (!zoteroType) {
 			Zotero.debug("discarded item from BibTeX; type was "+type);
+			zoteroType = "document";
 		}
 		var item = new Zotero.Item(zoteroType);
 		
@@ -2012,7 +2015,7 @@ function doExport() {
 				var creatorString = creator.lastName;
 
 				if (creator.firstName) {
-					creatorString = creator.firstName + " " + creator.lastName;
+					creatorString = creator.firstName + ", " + creator.lastName;
 				}
 
 				if (creator.creatorType == "editor") {

@@ -464,8 +464,8 @@ Zotero.Lyz = {
 			
 			var tmp = "";
 			for ( var i in author) {
-				if (author[i] in mappingTable)
-					tmp += mappingTable[author[i]];
+				if (author[i] in lyz_charmap)
+					tmp += lyz_charmap[author[i]];
 				else
 					tmp += author[i];
 			}
@@ -1146,7 +1146,7 @@ Zotero.Lyz = {
 	}
 };
 
-var mappingTable = {
+var lyz_charmap = {
 	"\u00A0" : "~", // NO-BREAK SPACE
 	"\u00A1" : "{\\textexclamdown}", // INVERTED EXCLAMATION MARK
 	"\u00A2" : "{\\textcent}", // CENT SIGN
