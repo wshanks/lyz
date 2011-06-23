@@ -407,7 +407,10 @@ Zotero.Lyz = {
 	createCiteKey : function(id, text, bib, obj_key) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
+		//if (ckre.exec(text) == null)
+		//	win.alert(id+"\n"+lastidx);
 		var oldkey = ckre.exec(text)[1];
+		lastidx = id+":"+oldkey;
 		var dic = new Array();
 		// current format is 0_XXXXXXX where 0 is "library id", not sure what that is for
 		dic["zotero"] = id;
@@ -829,7 +832,10 @@ Zotero.Lyz = {
 			var oldkeys = new Array();
 			for ( var i = 0; i < ids_h.length; i++) {
 				var zid = ids_h[i]['zid'];
-				ids.push(this.getZoteroItem(zid));
+				var item = this.getZoteroItem(zid);
+				//if (item==null)
+				//	win.alert("Export Error!\n"+zid);
+				ids.push(item);
 				oldkeys[ids_h[i]['key']] = zid;
 			}
 
@@ -938,7 +944,7 @@ Zotero.Lyz = {
 			}
 		}
 		if (info > 0)
-			win.alert(info + " were items where added.");
+			win.alert(info + " item(s) changed or added.");
 	},
 
 	getZoteroItem : function(key) {

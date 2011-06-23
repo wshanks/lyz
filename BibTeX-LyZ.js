@@ -1,4 +1,3 @@
-// revision 73
 {
 	"translatorID":"BibTeX-LyZ",
 	"translatorType":3,
@@ -9,7 +8,7 @@
 	"maxVersion":"",
 	"priority":200,
 	"configOptions":{"dataMode":"block"},
-	"displayOptions":{"exportCharset":"UTF-8", "exportFileData":false},
+	"displayOptions":{"exportCharset":"UTF-8", "exportNotes":true, "exportFileData":false},
 	"inRepository":true,
 	"lastUpdated":"2011-04-01 21:20:00"
 }
@@ -2015,7 +2014,7 @@ function doExport() {
 				var creatorString = creator.lastName;
 
 				if (creator.firstName) {
-					creatorString = creator.firstName + ", " + creator.lastName;
+					creatorString = creator.lastName + ", " + creator.firstName;
 				}
 
 				if (creator.creatorType == "editor") {
