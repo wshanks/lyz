@@ -307,12 +307,43 @@ Zotero.Lyz = {
 		// export citation to Bibtex
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var zitems = win.ZoteroPane.getSelectedItems();
+//		///////
+//		//var key = zitems[0].key;
+//		win.alert(zitems[0].key);
+//		var key = "0_MQP2MZSJ";
+//		var item = this.getZoteroItem(key);
+//		win.alert(item.firstCreator);
+//		var items = new Array();
+//		items.push(item);
+//		
+//		var text;
+//
+//		var callback = function(obj, worked) {
+//			// FIXME: the Zotero API has changed from obj.output
+//			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
+//			alert("TEST\n"+worked+text);
+//			if (!text) {// this is for Zotero 2.0.9
+//				text = obj.output.replace(/\r\n/g, "\n");
+//			}
+//		};
+//
+//		var translation = new Zotero.Translate.Export;
+//		translation.noWait = true;
+//		var translatorID = this.prefs.getCharPref("selectedTranslator");
+//		translation.setTranslator(translatorID);
+//		translation.setHandler("done", callback);
+//		
+//
+//		translation.setItems([item]);
+//		translation.translate();
+//		win.alert("UPDATE\n"+text);
+//		a
+//		///////
 		// FIXME: this should be called bellow, but it returns empty there (???)
 		if (!zitems.length) {
 			win.alert("Please select at least one citation.");
 			return;
 		}
-
 		// check document name
 		var res = this.checkDocInDB();
 		var bib = res[0];
@@ -407,10 +438,9 @@ Zotero.Lyz = {
 	createCiteKey : function(id, text, bib, obj_key) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
-		//if (ckre.exec(text) == null)
-		//	win.alert(id+"\n"+lastidx);
+		// TODO if item has been deleted from Zotero and added again it will have a new key
+		// basically now way to know.
 		var oldkey = ckre.exec(text)[1];
-		lastidx = id+":"+oldkey;
 		var dic = new Array();
 		// current format is 0_XXXXXXX where 0 is "library id", not sure what that is for
 		dic["zotero"] = id;
@@ -538,7 +568,7 @@ Zotero.Lyz = {
 		return biblio.text;
 	},
 
-	exportToBibtex : function(items, bib) {
+	exportToBibtex : function(items, bib, zids) {
 		// returns hash {id:[citekey,text]}
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var text;
@@ -551,13 +581,10 @@ Zotero.Lyz = {
 			}
 		};
 
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-
-		var translation = new Zotero.Translate("export");
+		var translation = new Zotero.Translate.Export;
 		var translatorID = this.prefs.getCharPref("selectedTranslator");
 		translation.setTranslator(translatorID);
 		translation.setHandler("done", callback);
-		//FIXME: not sure why this works, set to anything and will escape all characters
 		
 		if (this.prefs.getBoolPref("use_utf8")){
 			translation.setDisplayOptions({"exportCharset" : "UTF-8"});
@@ -572,15 +599,30 @@ Zotero.Lyz = {
 			translation.setItems([ items[i] ]);
 			translation.translate();
 			var ct;
+			var itemOK = true;
 			if (this.prefs.getBoolPref("createCiteKey")==true){
-				ct = this.createCiteKey(id, text, bib, items[i].key);
+				// Workaround entries that have been deleted and added again to Zotero, which means they will have 
+				// new zotero id and we can't identify them. 
+				try {
+					ct = this.createCiteKey(id, text, bib, items[i].key);
+				} catch(e){
+					
+					var res = this.DB.query("SELECT key FROM keys WHERE zid=?",[zids[i]]);
+					win.alert("There is problem with one the entries:\nZotero ID: "+zids[i]+"\nBibTeX Key: "+res[0]["key"]+
+							"\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
+							"You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
+							"If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
+							"If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
+							);
+					this.DB.query("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					itemOK = false;
+				}
 			} else {
 				var ckre = /.*@[a-z]+\{([^,]+),{1}/;
 				var key = ckre.exec(text)[1];
 				ct = [key, text];
 			}
-			
-			tmp[id] = [ ct[0], ct[1] ];
+			if (itemOK)	tmp[id] = [ ct[0], ct[1] ];
 		}
 
 		return tmp;
@@ -809,6 +851,7 @@ Zotero.Lyz = {
 
 	updateBibtexAll : function() {
 		//first update from the bibtex file
+		
 		this.updateFromBibtexFile();
 		// update when zotero items are modified
 		var win = this.wm.getMostRecentWindow("navigator:browser");
@@ -822,6 +865,7 @@ Zotero.Lyz = {
 		}
 		var citekey = this.prefs.getCharPref("citekey");
 
+		
 		var p = win.confirm("You are going to update BibTeX database:\n\n"
 				+ bib + "\n\nCurrent BibTex key format \"" + citekey
 				+ "\" will be used.\nDo you want to continue?");
@@ -829,17 +873,17 @@ Zotero.Lyz = {
 			// get all ids for the bibtex file
 			var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
 			var ids = new Array();
+			var zids = new Array();
 			var oldkeys = new Array();
 			for ( var i = 0; i < ids_h.length; i++) {
 				var zid = ids_h[i]['zid'];
 				var item = this.getZoteroItem(zid);
-				//if (item==null)
-				//	win.alert("Export Error!\n"+zid);
 				ids.push(item);
+				zids.push(zid);
 				oldkeys[ids_h[i]['key']] = zid;
 			}
 
-			var ex = this.exportToBibtex(ids, bib);
+			var ex = this.exportToBibtex(ids, bib, zids);
 			var zids = new Array();
 			var newkeys = new Array();
 			var text = "";
@@ -949,9 +993,36 @@ Zotero.Lyz = {
 
 	getZoteroItem : function(key) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
+//		keyhash = Zotero.Items.parseLibraryKeyHash(key);
+//		var sql = "SELECT ROWID FROM " + this._ZDO_table + " WHERE ";
+//		var params = [];
+//		if (this._ZDO_idOnly) {
+//			sql += "ROWID=?";
+//			params.push(key);
+//		}
+//		else {
+//			sql += "libraryID";
+//			if (libraryID) {
+//				sql += "=? ";
+//				params.push(libraryID);
+//			}
+//			else {
+//				sql += " IS NULL ";
+//			}
+//			sql += "AND key=?";
+//			params.push(key);
+//		}
+//		var id = Zotero.DB.valueQuery(sql, params);
+//		if (!id) {
+//			return false;
+//		}
+//		return Zotero[this._ZDO_Objects].get(id);
+		
 		var keyhash = Zotero.Items.parseLibraryKeyHash(key);
 		return Zotero.Items.getByLibraryAndKey(keyhash.libraryID, keyhash.key);
 	},
+	
+	
 
 	dialog_FilePickerOpen : function(win, title, filter_title, filter) {
 		var nsIFilePicker = Components.interfaces.nsIFilePicker;

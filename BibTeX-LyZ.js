@@ -8,7 +8,7 @@
 	"maxVersion":"",
 	"priority":200,
 	"configOptions":{"dataMode":"block"},
-	"displayOptions":{"exportCharset":"UTF-8", "exportNotes":true, "exportFileData":false},
+	"displayOptions":{"exportCharset":"UTF-8", "exportFileData":false},
 	"inRepository":true,
 	"lastUpdated":"2011-04-01 21:20:00"
 }
