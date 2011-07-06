@@ -45,7 +45,7 @@
 	</hbox>
 	<!-- context menu -->
 	<popup id="zotero-itemmenu">
-	  <!-- <menuseparator /> -->
+	  <menuseparator />
 	  <menuitem label="&cite;"
 		    oncommand="Zotero.Lyz.checkAndCite()"/>
 	</popup>
