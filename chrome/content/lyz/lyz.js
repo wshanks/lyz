@@ -24,7 +24,7 @@ Zotero.Lyz = {
 			}
 			this.prefs.setCharPref("os", this.os);
 		}
-
+		
 		this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
 				.getService(Components.interfaces.nsIWindowMediator);
 
@@ -915,6 +915,7 @@ Zotero.Lyz = {
 			// FIXME test again updating of all document associated with current bib
 			// var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
 			// if (tmp.length==1){
+			
 			if (this.os == "Win"){
 				this.lyxAskServer("buffer-write");
 				this.lyxAskServer("buffer-close");
