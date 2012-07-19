@@ -532,9 +532,9 @@ Zotero.Lyz = {
 		}
 		dic["title"] = title;
 		// YEAR
-		ckre = /.*year\s?=\s?\{(.*)\},?/;
+		ckre = /[\s,]+(year|date)\s*=\s*\{\D*(\d+)[^\}]*\},?/; //.*year\s?=\s?\{(.*)\},?/;
 		try {
-			year = ckre.exec(text)[1].replace(" ", "");
+			year = ckre.exec(text)[2].replace(" ", "");
 		} catch (e) {
 			//win.alert("All entries should to be dated. Please add a date to:\n"+text);
 			year = "";
