@@ -1986,7 +1986,7 @@ function doExport() {
 		if(item.reportNumber || item.issue || item.seriesNumber) {
 			writeField("number", item.reportNumber || item.issue || item.seriesNumber);
 		}
-
+/*
 		if(item.publicationTitle) {
 			if(item.itemType == "bookSection" || item.itemType == "conferencePaper") {
 				writeField("booktitle", item.publicationTitle);
@@ -1994,6 +1994,25 @@ function doExport() {
 				writeField("journal", item.publicationTitle);
 			}
 		}
+	*/
+		if(item.itemType == "conferencePaper") {
+			if(item.publicationTitle) {
+				writeField("booktitle", item.publicationTitle);
+			} else if(item.conferenceName) {
+				writeField("bookTitle", item.conferenceName);
+			} else {
+				writeField("bookTitle", "Unknown");
+			}
+		}
+
+		if(item.publicationTitle) {
+			if(item.itemType == "bookSection") {   
+				writeField("booktitle", item.publicationTitle);
+			} else {
+				writeField("journal", item.publicationTitle);
+			}
+		}
+		
 		
 		if(item.publisher) {
 			if(item.itemType == "thesis") {
