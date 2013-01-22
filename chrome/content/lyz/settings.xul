@@ -34,6 +34,11 @@
           <menupopup id="format-popup"/>
         </menulist>
       </row>      
+      
+      <row align="center">
+		<label value="Use journal abbreviations?"/>
+		<checkbox id="journalabbrev" onclick="journalAbbrev();"/>
+      </row>
     </rows>
   </grid>
 </dialog>

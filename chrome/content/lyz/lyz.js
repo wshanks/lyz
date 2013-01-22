@@ -281,6 +281,7 @@ Zotero.Lyz = {
 			this.prefs.setCharPref("lyxserver", params.out.lyxserver);
 			this.prefs.setBoolPref("createCiteKey", params.out.createcitekey);
 			this.prefs.setCharPref("selectedTranslator",params.out.selectedTranslator);
+			this.prefs.setBoolPref("useJournalAbbreviation",params.out.useJournalAbbreviation);
 		}
 	},
 
@@ -591,7 +592,9 @@ Zotero.Lyz = {
 		} else {
 			translation.setDisplayOptions({"exportCharset" : "escape"});
 		}
-		
+		if (this.prefs.getBoolPref("useJournalAbbreviation")){
+			translation.setDisplayOptions({"useJournalAbbreviation" : "True"});
+		}
 
 		var tmp = new Array();
 		for ( var i = 0; i < items.length; i++) {

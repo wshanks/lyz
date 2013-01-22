@@ -43,7 +43,8 @@ function onOK() {
 		lyxserver : document.getElementById("lyxserver").value,
 		citekey : document.getElementById("citekey").value,
 		createcitekey: document.getElementById("createcitekey").checked,
-		selectedTranslator : window.arguments[0].inn.translators[index].translatorID
+		selectedTranslator : window.arguments[0].inn.translators[index].translatorID,
+		useJournalAbbreviation : document.getElementById("journalabbrev").checked
 	};
 	return true;
 }
@@ -53,6 +54,14 @@ function enableCiteKey(){
 		document.getElementById("citekey").disabled = false;
 	} else {
 		document.getElementById("citekey").disabled = true;
+	}
+}
+
+function journalAbbrev(){
+	if (document.getElementById("journalabbrev").disabled){
+		document.getElementById("journalabbrev").disabled = false;
+	} else {
+		document.getElementById("journalabbrev").disabled = true;
 	}
 }
 
