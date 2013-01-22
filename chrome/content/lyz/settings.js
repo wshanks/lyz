@@ -9,6 +9,12 @@ function onLoad() {
 		document.getElementById("citekey").disabled = true;
 	}
 	var translators = window.arguments[0].inn.translators;
+	
+	var prefService =
+		Components.classes["@mozilla.org/preferences-service;1"].
+		getService(Components.interfaces.nsIPrefBranch);
+	document.getElementById("journalabbrev").checked = 
+		prefService.getBoolPref("extensions.lyz.useJournalAbbreviation");
 
 	var formatMenu = document.getElementById("format-menu");
 	var formatPopup = document.getElementById("format-popup");
@@ -54,14 +60,6 @@ function enableCiteKey(){
 		document.getElementById("citekey").disabled = false;
 	} else {
 		document.getElementById("citekey").disabled = true;
-	}
-}
-
-function journalAbbrev(){
-	if (document.getElementById("journalabbrev").disabled){
-		document.getElementById("journalabbrev").disabled = false;
-	} else {
-		document.getElementById("journalabbrev").disabled = true;
 	}
 }
 

@@ -1,6 +1,6 @@
 LyZ
 ---
-LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant.  The latest stable release is available at [https://addons.mozilla.org/en-US/firefox/addon/lyz/](https://addons.mozilla.org/en-US/firefox/addon/lyz/).  The latest source code is available at [https://github.com/willsALMANJ/lyz](https://github.com/willsALMANJ/lyz).
+LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant.  The latest stable release is available from [the Mozilla add-ons page](https://addons.mozilla.org/en-US/firefox/addon/lyz/).  The latest source code is available at [GitHub](https://github.com/willsALMANJ/lyz).
 
 Features
 --------
