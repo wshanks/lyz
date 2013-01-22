@@ -1,0 +1,102 @@
+LyZ
+---
+LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant.  The latest stable release is available at [https://addons.mozilla.org/en-US/firefox/addon/lyz/](https://addons.mozilla.org/en-US/firefox/addon/lyz/).  The latest source code is available at [https://github.com/willsALMANJ/lyz](https://github.com/willsALMANJ/lyz).
+
+Features
+--------
+* Inserting citations to LyX from Zotero.
+* BibTeX database automatically updated when citation is inserted.
+* BibTeX database can be updated when the references in Zotero are modified.
+* Custom BibTeX key format.
+* Unique BibTeX key check.
+* Custom BibTeX translators.
+* Synchronization of BibTex keys between LyX document, BibTeX database and LyZ.
+* Editing of master/child documents (the same BibTeX database) and multiple documents (different BibTeX database for each document).
+* Persistent association of LyX documents and BibTeX databases.
+* Support for group cooperation.
+
+Installation and Settings
+-------------------------
+1. Install LyZ  from Firefox Addons and restart Firefox.
+2. Open LyX and set LyXServer path (in LyX go to menu, Tools > Preferences... > Paths and set LyXServer pipe to): Windows users can use the default path setting in LyZ, i.e. `\\.\pipe\lyxpipe`. Linux and Mac users can use e.g. `~/.lyxpipe` and change the LyZ settings accordingly.
+3. By default all characters are escaped, e.g. š becomes \v{s}. Set `extensions.lyz.use_utf8` to true in `about:config` to avoid escaping (in case you need to use non-latin scripts such as Chinese).
+4. Open document in LyX.
+
+Adding and inserting citations
+------------------------------
+1. Open Zotero, select citation and either from LyZ menu or from context menu (right click on the citation) do “Cite in LyX”.
+2. When you try to insert citation into a new document (i.e. document unknown to LyZ) you have to select BibTeX database. You will be asked to either create a new database or choose a database you have created before (by LyZ). Type the database name (*.bib extension is automatically added if you don’t provide it) and press OK. The citation is added into the BibTeX database you have just created and inserted into the LyX document. Your citation should appear in LyX document now.
+3. Insert the BibTeX database into LyX document. See BibTeX and LyX.
+4. Insert additional citations, new ones from Zotero, previously added citation can be either inserted through the LyX interface or from Zotero.
+5. If you modify the reference information in Zotero, use “Update BibTeX” from LyZ menu to update the BibTeX database.
+
+Custom BibTeX keys
+------------------
+* Custom BibTeX keys can be set in LyZ > Settings dialog.
+* The default format is “author year title”. Good alternative for the use with natbib package is format “zotero”, which will produce “human unreadable” BibTeX keys. It consists of library ID and zotero item key, e.g. `0_XXXXX`. Format keyword “zoteroShort” will produce only XXXXX, which can be used when exporting from OOo.
+* Key formats can be composed from keywords “author”, “year”, “title”, “zotero” and separators such as “_” (the following characters should be safe to use: a-z, 0-9!$&*+-.:;<>?[]^`|), e.g. “author year title”, which will produce authoryeartitle BibTeX key, e.g. tichy1988thefoundations. If you prefer the default format used in Zotero BibTeX export (tichy_thefoundations_1988), change the pattern to “author _ title _ year”. The keywords and any separating characters have to be separated by space. Characters in citekeys are escaped and unsafe characters are removed conforming to /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g.
+* If you use custom BibTeX translator and want to use the cite keys generated in the translator, go to LyZ > Setting and switch creation of cite keys off.
+
+Update BibTeX
+-------------
+Menu command “Update BibTex” will update BibTeX database of the active LyX document. Whatever changes made in Zotero will be reflected in the update, including BibTeX keys if the BibTeX key format or the relevant information (first author, title, year) have been changed.
+
+When a single BibTeX database is shared among several authors, e.g. using version control system such as SVN and CVS, LyZ database is updated from local working copy of BibTeX database.
+
+Only current LyX document will be updated. Multiple document update is implemented, but seems unreliable. Needs more testing…
+Synchronization between LyX/BibTeX/LyZ
+
+When Zotero reference is changed, BibTeX database as well as the LyX document can be updated. This is useful when nice BibTeX keys are used, such as ‘author year title’ and e.g. the title or the first author’s surname has been modified, which will result in modification of the BibTeX key. When the “Update BibTeX” is run, you should select to update the LyX document in case your modifications to Zotero references might affect your BibTeX keys. Before the update, a backup of the active LyX document is made (extension *.lyz). LyZ will save, close and then reopen your document.
+
+Notes on usage
+--------------
+* Always modify your references in Zotero. If you modify the BibTeX database manually or using other software, LyZ will overwrite all the changes when you run “Update BibTeX“.
+Keep your Zotero items unique. LyZ does not make an attempt to identify duplicates, they will be treated as different items and unique BibTeX keys will be created.
+
+* When working with master/child documents in LyX, you will have to specify the BibTeX database for each child document. This will be the same file as specified for the master document. Unfortunately LyZ has no way of knowing the relationship between documents, so it has to be done manually.
+
+* Old writing projects can be deleted from LyZ menu. When the record of BibTeX database is deleted, all associated LyX document records are also deleted. When LyX document is deleted, associated BibTeX database will remain untouched as it may be used by another document. The actual file won’t be deleted.
+
+* BibTeX database is uniformly exported to UTF8 and all characters are escaped. Exporting to doesn’t seem to have any advantages. When your references contain extra characters such as the degree symbol, add `\usepackage{textcomp}` to your preamble.
+
+* URLs in bibliography. Use bibliography style that can handle URLs, such as apalike, or add `\usepackage{url}` to your preamble.
+
+* LyZ stores the information about documents and BibTeX databases in lyz.sqlite in the Zotero folder. If you backup Zotero with some synchronization application, you will notice the new file.
+
+* When working with non-latin scripts such as Chinese, set `extensions.lyz.use_utf8` to true in `about:config` to avoid escaping.
+
+Problems, Ideas, Requests
+-------------------------
+Please follow these tips to find out the source of your problem:
+
+* Run Lyx in debugging mode from commandline by (Linux and Mac users change accordingly)
+
+        lyx.exe -dbg lyxserver
+
+* Useful messages should appear whenever you send some command from Lyz. A useful message will contain words like ERROR, undefined etc.
+
+* To send a command from Lyz, you simply use one of the functions, e.g. “Cite in Lyx” or use command line, viz. [http://wiki.lyx.org/LyX/LyXServer](http://wiki.lyx.org/LyX/LyXServer).
+
+* Also you can use a variant of the last version of Lyz, which has additional menu item “Test…”. This will allow you to send single commands to Lyx. Currently Lyz uses the following commands (code in the parentheses indicates usage):
+
+        server-get-filename (server-get-filename)
+        citation-insert (citation-insert:LYZ:author2010title)
+        buffer-next (buffer-next)
+        server-get-xy (server-get-xy)
+        buffer-write (buffer-write)
+        buffer-close (buffer-close)
+        file-open (file-open:path, where path is the response from server-get-filename)
+
+* All functions Lyz has are patched together using these commands. The most trouble some seems to be the server-get-filename.
+
+* Extract useful information from Firefox’s Error Console and from commandline where you ran `lyx.exe -dbg lyxserver`.
+
+* Peruse the Issues opened by other users at [https://github.com/willsALMANJ/lyz](https://github.com/willsALMANJ/lyz).  Be sure to check the closed issues as well to see if a solution has already been found for your problem.  If not, open a new issue.
+
+Current state of development
+----------------------------
+The current maintainer of LyZ is not the original creator and is not intimately familiar with the source code.  He plans to update LyZ as necessary to maintain functionality with the latest releases of LyX and Zotero.  He will also happily accept and merge code patches submitted by other users.  He will try to help with other issues that users experience, but he doesn't make any promises about being able to make things work.
+
+Credits
+-------
+Lyz was written by  Petr Šimon.  It is inspired by Lytero, which Petr wanted to improve, but he ended up starting from scratch. Hence the new name. Thanks to Dan Stillman and mronkko at zotero.org forum. Justin Wood for BOM and escaping suggestions and donation!  It is currently maintained on GitHub by willsALMANJ.
