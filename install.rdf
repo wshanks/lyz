@@ -4,7 +4,7 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>lyz@zotero.org</em:id>
-    <em:version>2.1.6</em:version>
+    <em:version>2.1.7</em:version>
     <em:type>2</em:type>
     <em:unpack>true</em:unpack>
     <!-- Target Application this extension can install into, 
@@ -20,7 +20,7 @@
       <Description>
 	<em:id>zotero@chnm.gmu.edu</em:id>
 	<em:minVersion>3.0b1</em:minVersion>
-	<em:maxVersion>4.0.*</em:maxVersion>
+	<em:maxVersion>*</em:maxVersion>
       </Description>
     </em:targetApplication>
   <em:name>LyZ</em:name>
