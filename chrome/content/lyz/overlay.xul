@@ -11,6 +11,7 @@
 	</stringbundleset>
 	<hbox class="toolbar"  id="zotero-items-toolbar" align="center">
 	  <toolbarbutton id="lyz-menu-button" tooltiptext="LyZ" type="menu" 
+	  		 class="zotero-tb-button"
 			 insertafter="zotero-tb-attachment-add">
 	    <menupopup id="lyz-menupopup">
 	      <menuitem id="lyz-send" 

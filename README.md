@@ -24,11 +24,19 @@ Installation and Settings
 
 Adding and inserting citations
 ------------------------------
-1. Open Zotero, select citation and either from LyZ menu or from context menu (right click on the citation) do “Cite in LyX”.
-2. When you try to insert citation into a new document (i.e. document unknown to LyZ) you have to select BibTeX database. You will be asked to either create a new database or choose a database you have created before (by LyZ). Type the database name (*.bib extension is automatically added if you don’t provide it) and press OK. The citation is added into the BibTeX database you have just created and inserted into the LyX document. Your citation should appear in LyX document now.
-3. Insert the BibTeX database into LyX document. See BibTeX and LyX.
-4. Insert additional citations, new ones from Zotero, previously added citation can be either inserted through the LyX interface or from Zotero.
-5. If you modify the reference information in Zotero, use “Update BibTeX” from LyZ menu to update the BibTeX database.
+1. Open the LyX document you want to add a citation to and put the cursor at the point in the text at which you want the citation added.
+
+2. From Zotero, select a citation and either from the LyZ menu or from the context menu (right click on the citation) do “Cite in LyX”.
+
+	When you try to insert a citation into a new document (i.e. document unknown to LyZ) you have to select a BibTeX database. You will be asked to either create a new database or choose a database you have created before (by LyZ). Type the database name (*.bib extension is automatically added if you don’t provide it) and press OK. The citation is added into the BibTeX database you have just created and inserted into the LyX document. Your citation should appear in LyX document now.  Further citations are automatically added to this database.
+3. Insert the BibTeX database into the LyX document by adding a bibliography (`Insert->List/TOC->BibTeX Bibliography...`) and then selecting the newly created \*.bib file as the database.
+	* From the bibliography window (which appears when the bibliography is created and may be accessed by clicking on the bibliography), you may also select a BibTeX style file (*.bst).  This file determines how your references will be formatted in the bibliography.  Most TeX packages come with a large number of style files.  Some journals (or other publishing entities) also provide their own style files.  One good option is [apalike2](http://www.ctan.org/pkg/apalike2).
+	* From `Document->Settings->Bibliography`, you may choose a citation style which determines how your citations will appear in the text.  Natbib and Jurabib give more flexible citation styles than the default numerical option.
+	* A helpful introduction to working with BibTeX and LyX is available from the [LyX website](http://wiki.lyx.org/BibTeX/Introduction).
+4. Insert additional citations
+	* New citations can be added from Zotero as above. 
+	* Previously added citations can be either inserted through Zotero or through the LyX interface.
+5. If you modify the reference information of previously cited items in Zotero, use “Update BibTeX” from the LyZ menu to update the BibTeX database.
 
 Custom BibTeX keys
 ------------------
