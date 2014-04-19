@@ -52,7 +52,9 @@ Menu command “Update BibTex” will update BibTeX database of the active LyX d
 When a single BibTeX database is shared among several authors, e.g. using version control system such as SVN and CVS, LyZ database is updated from local working copy of BibTeX database.
 
 Only current LyX document will be updated. Multiple document update is implemented, but seems unreliable. Needs more testing…
+
 Synchronization between LyX/BibTeX/LyZ
+--------------------------------------
 
 When Zotero reference is changed, BibTeX database as well as the LyX document can be updated. This is useful when nice BibTeX keys are used, such as ‘author year title’ and e.g. the title or the first author’s surname has been modified, which will result in modification of the BibTeX key. When the “Update BibTeX” is run, you should select to update the LyX document in case your modifications to Zotero references might affect your BibTeX keys. Before the update, a backup of the active LyX document is made (extension *.lyz). LyZ will save, close and then reopen your document.
 
@@ -100,6 +102,14 @@ Please follow these tips to find out the source of your problem:
 * Extract useful information from Firefox’s Error Console and from commandline where you ran `lyx.exe -dbg lyxserver`.
 
 * Peruse the Issues opened by other users at [https://github.com/willsALMANJ/lyz](https://github.com/willsALMANJ/lyz).  Be sure to check the closed issues as well to see if a solution has already been found for your problem.  If not, open a new issue.
+
+Common Issues
+-------------
+### Update BibTeX does not work
+Some users have found that the Update BibTeX command stops working unexpectedly. One possible solution is to edit the `lyz.sqlite` file in the Zotero data directory directly and to remove any bibliography entries in it that look malformed (e.g. some of their fields are empty). To edit `lyz.sqlite`, a SQLite editor is needed. The [sqlite-manager Firefox addon](https://code.google.com/p/sqlite-manager/) is a light-weight option. If you experience this issue and have any insight on what causes it, please contact the developer via GitHub (open a new issue or comment on one of the closed issues related to Update BibTeX).
+
+### Using a non-standard lyxpipe
+On Windows the lyxpipe path (`\\.\pipe\lyxpipe`) is a special path and not a real file. You should not try to change this path to something else.
 
 Current state of development
 ----------------------------
