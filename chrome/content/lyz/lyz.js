@@ -680,8 +680,8 @@ Zotero.Lyz = {
 		if (params.out) {
 			doc = params.out.item;
 		}
-		var res = win.confirm("Do you really want to delete document:\n" + doc
-				+ "?", "Deleting LyZ database record");
+		var res = win.confirm("Do you really want to delete the LyZ database record of the document\n" 
+				+ doc + "?");
 		if (!res)
 			return;
 		this.DB.query("DELETE FROM docs WHERE doc=?",[doc]);
