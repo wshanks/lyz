@@ -28,14 +28,42 @@ Zotero.Lyz = {
 		this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
 				.getService(Components.interfaces.nsIWindowMediator);
 
-		this.DB = new Zotero.DBConnection("lyz");
-		var sql;
-		if (!this.DB.tableExists('docs')) {
-			sql = "CREATE TABLE docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)";
-			this.DB.query(sql);
-			sql = "CREATE TABLE keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)";
-			this.DB.query(sql);
+		if (Zotero.version.split('.')[0] > 4) {
+			return
 		}
+
+		this.DB = new Zotero.DBConnection("lyz");
+	    var sqlDocs = "CREATE TABLE docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)";
+	    var sqlKeys = "CREATE TABLE keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)";
+		if (Zotero.version.split('.')[0] < 5) {
+			// XXX: Legacy 4.0
+			if (!this.DB.tableExists('docs')) {
+				this.DB.query(sqlDocs);
+				this.DB.query(sqlKeys);
+			}
+		} else {
+			Zotero.Promise.coroutine(function* (context) {
+				let tableExists = yield context.DB.tableExists('docs')
+				Zotero.Lyz.tmp = tableExists
+				if (!tableExists) {
+					context.DB.queryTx(sqlDocs);
+					context.DB.queryTx(sqlKeys);
+				}
+			})(this)
+		}
+	},
+
+	lyzDisableCheck: function() {
+		if (Zotero.version.split('.')[0] > 4) {
+			if (! this.prefs.getBoolPref('zotero5disable')) {
+				return false
+			}
+			var win = this.wm.getMostRecentWindow("navigator:browser");
+			win.alert('Warning: Lyz is not compatible with Zotero version 5. Disable Lyz to avoid data loss. For more information or to help with updating Lyz, visit www.github.com/willsALMANJ/lyz')
+			return true
+		}
+
+		return false
 	},
 
 	lyxGetDoc : function() {
@@ -259,34 +287,56 @@ Zotero.Lyz = {
     },
 
 	settings : function() {
-		var params, inn, out;
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var translation = new Zotero.Translate("export");
-		var translators = translation.getTranslators();
-		params = {
-			inn : {
-				citekey : this.prefs.getCharPref("citekey"),
-				createcitekey: this.prefs.getBoolPref("createCiteKey"),
-				lyxserver : this.prefs.getCharPref("lyxserver"),
-				selectedTranslator:this.prefs.getCharPref("selectedTranslator"),
-                translators:translators
-			},
-			out : null
-		};
-		win.openDialog("chrome://lyz/content/settings.xul", "",
-				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (this.lyzDisableCheck()) {
+			return
+		}
 
-		if (params.out) {
-			this.prefs.setCharPref("citekey", params.out.citekey);
-			this.prefs.setCharPref("lyxserver", params.out.lyxserver);
-			this.prefs.setBoolPref("createCiteKey", params.out.createcitekey);
-			this.prefs.setCharPref("selectedTranslator",params.out.selectedTranslator);
-			this.prefs.setBoolPref("useJournalAbbreviation",params.out.useJournalAbbreviation);
+		function openSettings(context, translators) {
+			var params, inn, out;
+			var win = context.wm.getMostRecentWindow("navigator:browser");
+			params = {
+				inn : {
+					citekey : context.prefs.getCharPref("citekey"),
+					createcitekey: context.prefs.getBoolPref("createCiteKey"),
+					lyxserver : context.prefs.getCharPref("lyxserver"),
+					selectedTranslator:context.prefs.getCharPref("selectedTranslator"),
+					translators:translators
+				},
+				out : null
+			};
+			win.openDialog("chrome://lyz/content/settings.xul", "",
+					"chrome, dialog, modal, centerscreen, resizable=yes", params);
+
+			if (params.out) {
+				context.prefs.setCharPref("citekey", params.out.citekey);
+				context.prefs.setCharPref("lyxserver", params.out.lyxserver);
+				context.prefs.setBoolPref("createCiteKey", params.out.createcitekey);
+				context.prefs.setCharPref("selectedTranslator",params.out.selectedTranslator);
+				context.prefs.setBoolPref("useJournalAbbreviation",params.out.useJournalAbbreviation);
+			}
+		}
+
+		var translation = new Zotero.Translate("export");
+
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			var translators = translation.getTranslators();
+			openSettings(this, translators)
+		} else {
+			Zotero.Promise.coroutine(function* (context) {
+				var translators = yield translation.getTranslators()
+				openSettings(context, translators)
+			})(this)
 		}
 	},
 
 	addNewDocument : function(doc, bib) {
-		this.DB.query("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			this.DB.query("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
+		} else {
+			this.DB.queryTx("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
+		}
 	},
 
 	checkDocInDB : function() {
@@ -297,7 +347,12 @@ Zotero.Lyz = {
 			win.alert("Could not retrieve document name.");
 			return null;
 		}
-		res = this.DB.query("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			res = this.DB.query("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
+		} else {
+			res = this.DB.queryTx("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
+		}
 		if (!res) {
 			return [ res, doc ];
 		}
@@ -305,6 +360,9 @@ Zotero.Lyz = {
 	},
 
 	checkAndCite : function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
 		// export citation to Bibtex
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var zitems = win.ZoteroPane.getSelectedItems();
@@ -396,10 +454,20 @@ Zotero.Lyz = {
 			keys.push(citekey);
 			//check database, if not in, append to entries_text
 			//single key can be associated with several bibtex files
-			var res = this.DB.query("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
+			if (Zotero.version.split('.')[0] < 5) {
+				// XXX: Legacy 4.0
+				var res = this.DB.query("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
+			} else {
+				var res = this.DB.queryTx("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
+			}
 
 			if (!res) {
-				this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
+				if (Zotero.version.split('.')[0] < 5) {
+					// XXX: Legacy 4.0
+					this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
+				} else {
+					this.DB.queryTx("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
+				}
 				zids.push(zid);
 				entries_text += text;
 			} else if (res[0]['key'] != citekey) {
@@ -555,7 +623,12 @@ Zotero.Lyz = {
 		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
 		citekey = citekey.replace(re, "");
 		//check if cite key exists
-		var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
+		} else {
+			var res = this.DB.queryTx("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
+		}
 		if (res.length > 0)
 			citekey += (res.length + 1);
 		text = text.replace(oldkey, citekey);
@@ -598,6 +671,7 @@ Zotero.Lyz = {
 
 		var tmp = new Array();
 		for ( var i = 0; i < items.length; i++) {
+			// TODO: change to libraryKey
 			var id = Zotero.Items.getLibraryKeyHash(items[i]);
 			translation.setItems([ items[i] ]);
 			translation.translate();
@@ -610,14 +684,24 @@ Zotero.Lyz = {
 					ct = this.createCiteKey(id, text, bib, items[i].key);
 				} catch(e){
 					
-					var res = this.DB.query("SELECT key FROM keys WHERE zid=?",[zids[i]]);
+					if (Zotero.version.split('.')[0] < 5) {
+						// XXX: Legacy 4.0
+						var res = this.DB.query("SELECT key FROM keys WHERE zid=?",[zids[i]]);
+					} else {
+						var res = this.DB.queryTx("SELECT key FROM keys WHERE zid=?",[zids[i]]);
+					}
 					win.alert("There is problem with one the entries:\nZotero ID: "+zids[i]+"\nBibTeX Key: "+res[0]["key"]+
 							"\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
 							"You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
 							"If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
 							"If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
 							);
-					this.DB.query("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					if (Zotero.version.split('.')[0] < 5) {
+						// XXX: Legacy 4.0
+						this.DB.query("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					} else {
+						this.DB.queryTx("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					}
 					itemOK = false;
 				}
 			} else {
@@ -632,8 +716,16 @@ Zotero.Lyz = {
 	},
 
 	dbDeleteBib : function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
 		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
+		} else {
+			var dic = this.DB.queryTx("SELECT bib FROM docs GROUP BY bib");
+		}
 		var params = {
 			inn : {
 				items : dic,
@@ -657,13 +749,27 @@ Zotero.Lyz = {
 						"Deleting LyZ database record");
 		if (!res)
 			return;
-		this.DB.query("DELETE FROM docs WHERE bib=?",[bib]);
-		this.DB.query("DELETE FROM keys WHERE bib=?",[bib]);
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			this.DB.query("DELETE FROM docs WHERE bib=?",[bib]);
+			this.DB.query("DELETE FROM keys WHERE bib=?",[bib]);
+		} else {
+			this.DB.queryTx("DELETE FROM docs WHERE bib=?",[bib]);
+			this.DB.queryTx("DELETE FROM keys WHERE bib=?",[bib]);
+		}
 	},
 
 	dbDeleteDoc : function(doc, bib) {
+		if (this.lyzDisableCheck()) {
+			return
+		}
 		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var dic = this.DB.query("SELECT doc FROM docs");
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			var dic = this.DB.query("SELECT doc FROM docs");
+		} else {
+			var dic = this.DB.queryTx("SELECT doc FROM docs");
+		}
 		var params = {
 			inn : {
 				items : dic,
@@ -684,12 +790,25 @@ Zotero.Lyz = {
 				+ doc + "?");
 		if (!res)
 			return;
-		this.DB.query("DELETE FROM docs WHERE doc=?",[doc]);
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			this.DB.query("DELETE FROM docs WHERE doc=?",[doc]);
+		} else {
+			this.DB.queryTx("DELETE FROM docs WHERE doc=?",[doc]);
+		}
 	},
 
 	dbRenameDoc : function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
 		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var dic = this.DB.query("SELECT id,doc FROM docs");
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			var dic = this.DB.query("SELECT id,doc FROM docs");
+		} else {
+			var dic = this.DB.queryTx("SELECT id,doc FROM docs");
+		}
 		var params = {
 			inn : {
 				items : dic,
@@ -711,12 +830,22 @@ Zotero.Lyz = {
 		newfname = newfname.replace(/\\/g, "/");
 		if (!newfname)
 			return;
-		this.DB.query("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			this.DB.query("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
+		} else {
+			this.DB.queryTx("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
+		}
 	},
 
 	dbRenameBib : function() {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var dic = this.DB.query("SELECT DISTINCT bib FROM docs");
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			var dic = this.DB.query("SELECT DISTINCT bib FROM docs");
+		} else {
+			var dic = this.DB.queryTx("SELECT DISTINCT bib FROM docs");
+		}
 		var params = {
 			inn : {
 				items : dic,
@@ -736,8 +865,14 @@ Zotero.Lyz = {
 				+ bib, "Bibtex", "*.bib").path;
 		if (!newfname)
 			return;
-		this.DB.query("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
-		this.DB.query("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
+        if (Zotero.version.split('.')[0] < 5) {
+            // XXX: Legacy 4.0
+			this.DB.query("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
+			this.DB.query("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
+		} else {
+			this.DB.queryTx("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
+			this.DB.queryTx("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
+		}
 	},
 
 	syncBibtexKeyFormat : function(doc, oldkeys, newkeys) {
@@ -853,6 +988,9 @@ Zotero.Lyz = {
 	},
 
 	updateBibtexAll : function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
 		//first update from the bibtex file
 		
 		this.updateFromBibtexFile();
@@ -874,7 +1012,12 @@ Zotero.Lyz = {
 				+ "\" will be used.\nDo you want to continue?");
 		if (p) {
 			// get all ids for the bibtex file
-			var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
+			if (Zotero.version.split('.')[0] < 5) {
+				// XXX: Legacy 4.0
+				var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
+			} else {
+				var ids_h = this.DB.queryTx("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
+			}
 			var ids = new Array();
 			var zids = new Array();
 			var oldkeys = new Array();
@@ -903,7 +1046,12 @@ Zotero.Lyz = {
 
 			// now is time to update db, bibtex and lyx
 			for ( var zid in newkeys) {
-				this.DB.query("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
+				if (Zotero.version.split('.')[0] < 5) {
+					// XXX: Legacy 4.0
+					this.DB.query("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
+				} else {
+					this.DB.queryTx("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
+				}
 			}
 			this.writeBib(bib, text, zids);
 			res = win
@@ -974,7 +1122,12 @@ Zotero.Lyz = {
 		var info = 0;
 		for ( var i = 0; i < ar.length; i++) {
 			var zid = ar[i];
-			res = this.DB.query("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
+			if (Zotero.version.split('.')[0] < 5) {
+				// XXX: Legacy 4.0
+				res = this.DB.query("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
+			} else {
+				res = this.DB.queryTx("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
+			}
 
 			if (!res) {
 				/*info += zid + ": "
@@ -983,7 +1136,12 @@ Zotero.Lyz = {
 						*/
 				info+=1;
 				// key=zid is not right, but it will be updated when updateBibtex is run
-				res = this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
+				if (Zotero.version.split('.')[0] < 5) {
+					// XXX: Legacy 4.0
+					res = this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
+				} else {
+					res = this.DB.queryTx("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
+				}
 				if (!res) {
 					win.alert("ERROR: INSERT INTO keys VALUES(null,\"" + zid
 							+ "\",\"" + bib + "\",\"" + zid + "\")");
@@ -1121,75 +1279,76 @@ Zotero.Lyz = {
 		return [ file_stream, cstream ];
 	},
 
-	loadTranslators : function() {
-		_cache = [];
-		_translators = {};
-		
-		var i = 0;
-		var filesInCache = {};
-		var contents = Zotero.getTranslatorsDirectory().directoryEntries;
-		while (contents.hasMoreElements()) {
-			var file = contents.getNext().QueryInterface(
-					Components.interfaces.nsIFile);
-			var leafName = file.leafName;
-			if (!leafName || leafName[0] == ".")
-				continue;
-			var lastModifiedTime = file.lastModifiedTime;
-
-			var dbCacheEntry = false;
-			if (dbCache[leafName]) {
-				filesInCache[leafName] = true;
-				if (dbCache[leafName].lastModifiedTime == lastModifiedTime) {
-					dbCacheEntry = dbCache[file.leafName];
-				}
-			}
-
-			if (dbCacheEntry) {
-				// get JSON from cache if possible
-				var translator = new Zotero.Translator(file,
-						dbCacheEntry.translatorJSON, dbCacheEntry.code);
-				filesInCache[leafName] = true;
-			} else {
-				// otherwise, load from file
-				var translator = new Zotero.Translator(file);
-			}
-
-			if (translator.translatorID) {
-				if (_translators[translator.translatorID]) {
-					// same translator is already cached
-					translator
-							.logError('Translator with ID '
-									+ translator.translatorID
-									+ ' already loaded from "'
-									+ _translators[translator.translatorID].file.leafName
-									+ '"');
-				} else {
-					// add to cache
-					_translators[translator.translatorID] = translator;
-					for ( var type in TRANSLATOR_TYPES) {
-						if (translator.translatorType & TRANSLATOR_TYPES[type]) {
-							_cache[type].push(translator);
-						}
-					}
-
-					if (!dbCacheEntry) {
-						// Add cache misses to DB
-						if (!transactionStarted) {
-							transactionStarted = true;
-							Zotero.DB.beginTransaction();
-						}
-						Zotero.Translators.cacheInDB(leafName,
-								translator.metadataString,
-								translator.cacheCode ? translator.code : null,
-								lastModifiedTime);
-						delete translator.metadataString;
-					}
-				}
-			}
-
-			i++;
-		}
-	},
+	// This function appears to be unused
+	// loadTranslators : function() {
+	// 	_cache = [];
+	// 	_translators = {};
+	// 	
+	// 	var i = 0;
+	// 	var filesInCache = {};
+	// 	var contents = Zotero.getTranslatorsDirectory().directoryEntries;
+	// 	while (contents.hasMoreElements()) {
+	// 		var file = contents.getNext().QueryInterface(
+	// 				Components.interfaces.nsIFile);
+	// 		var leafName = file.leafName;
+	// 		if (!leafName || leafName[0] == ".")
+	// 			continue;
+	// 		var lastModifiedTime = file.lastModifiedTime;
+    //
+	// 		var dbCacheEntry = false;
+	// 		if (dbCache[leafName]) {
+	// 			filesInCache[leafName] = true;
+	// 			if (dbCache[leafName].lastModifiedTime == lastModifiedTime) {
+	// 				dbCacheEntry = dbCache[file.leafName];
+	// 			}
+	// 		}
+    //
+	// 		if (dbCacheEntry) {
+	// 			// get JSON from cache if possible
+	// 			var translator = new Zotero.Translator(file,
+	// 					dbCacheEntry.translatorJSON, dbCacheEntry.code);
+	// 			filesInCache[leafName] = true;
+	// 		} else {
+	// 			// otherwise, load from file
+	// 			var translator = new Zotero.Translator(file);
+	// 		}
+    //
+	// 		if (translator.translatorID) {
+	// 			if (_translators[translator.translatorID]) {
+	// 				// same translator is already cached
+	// 				translator
+	// 						.logError('Translator with ID '
+	// 								+ translator.translatorID
+	// 								+ ' already loaded from "'
+	// 								+ _translators[translator.translatorID].file.leafName
+	// 								+ '"');
+	// 			} else {
+	// 				// add to cache
+	// 				_translators[translator.translatorID] = translator;
+	// 				for ( var type in TRANSLATOR_TYPES) {
+	// 					if (translator.translatorType & TRANSLATOR_TYPES[type]) {
+	// 						_cache[type].push(translator);
+	// 					}
+	// 				}
+    //
+	// 				if (!dbCacheEntry) {
+	// 					// Add cache misses to DB
+	// 					if (!transactionStarted) {
+	// 						transactionStarted = true;
+	// 						Zotero.DB.beginTransaction();
+	// 					}
+	// 					Zotero.Translators.cacheInDB(leafName,
+	// 							translator.metadataString,
+	// 							translator.cacheCode ? translator.code : null,
+	// 							lastModifiedTime);
+	// 					delete translator.metadataString;
+	// 				}
+	// 			}
+	// 		}
+    //
+	// 		i++;
+	// 	}
+	// },
 
 	kile : function() {
 		// based on file - allow loading
@@ -1199,6 +1358,9 @@ Zotero.Lyz = {
 	},
 
 	test : function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var t = prompt("Command", "server-get-filename");
 		if (!t) {
