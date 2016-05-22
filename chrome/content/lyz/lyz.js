@@ -1,5 +1,6 @@
 // Credits:
 // - small bits were borrowed from Lytero by Demetrio Girardi, lytero@dementrioatgmail.com
+Components.utils.import("resource://gre/modules/Services.jsm");
 
 Zotero.Lyz = {
 
@@ -16,8 +17,8 @@ Zotero.Lyz = {
 		this.prefs = this.prefs.getBranch("extensions.lyz.");
 		this.os = this.prefs.getCharPref("os");
 		
-		if (this.os == ""){
-			if (navigator.platform.indexOf("Win")==0){
+		if (this.os === ""){
+			if (navigator.platform.indexOf("Win")===0){
 				this.os = "Win";
 			} else {// assuming this works also for MacOS better
 				this.os = "Linux";
@@ -28,13 +29,14 @@ Zotero.Lyz = {
 		this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
 				.getService(Components.interfaces.nsIWindowMediator);
 
-		if (Zotero.version.split('.')[0] > 4) {
+		if ((Zotero.version.split('.')[0] > 4) && 
+			(this.prefs.getBoolPref('zotero5disable'))) {
 			return
 		}
 
 		this.DB = new Zotero.DBConnection("lyz");
-	    var sqlDocs = "CREATE TABLE docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)";
-	    var sqlKeys = "CREATE TABLE keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)";
+	    var sqlDocs = "CREATE TABLE IF NOT EXISTS docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)";
+	    var sqlKeys = "CREATE TABLE IF NOT EXISTS keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)";
 		if (Zotero.version.split('.')[0] < 5) {
 			// XXX: Legacy 4.0
 			if (!this.DB.tableExists('docs')) {
@@ -42,15 +44,13 @@ Zotero.Lyz = {
 				this.DB.query(sqlKeys);
 			}
 		} else {
-			Zotero.Promise.coroutine(function* (context) {
-				let tableExists = yield context.DB.tableExists('docs')
-				Zotero.Lyz.tmp = tableExists
-				if (!tableExists) {
-					context.DB.queryTx(sqlDocs);
-					context.DB.queryTx(sqlKeys);
-				}
+			Zotero.Promise.coroutine(function*(context) {
+				yield context.DB.queryAsync(sqlDocs);
+				yield context.DB.queryAsync(sqlKeys);
 			})(this)
 		}
+		var shutdownObserver = {observe: this.shutdown}
+		Services.obs.addObserver(shutdownObserver, "quit-application", false);
 	},
 
 	lyzDisableCheck: function() {
@@ -75,8 +75,8 @@ Zotero.Lyz = {
 			res = this._lyxAskServer("server-get-filename");
 		}
 		if (!res) {
-			win.alert("Could not contact server at: "
-					+ this.prefs.getCharPref("lyxserver"));
+			win.alert("Could not contact server at: " +
+					  this.prefs.getCharPref("lyxserver"));
 			return null;
 		}
 
@@ -90,7 +90,7 @@ Zotero.Lyz = {
 	},
 
 	lyxGetOpenDocs : function() {
-		var docs = new Array();
+		var docs = [];
 		var original = this.lyxGetDoc();
 		docs.push(original);
 		var name;
@@ -164,8 +164,8 @@ Zotero.Lyz = {
 					.createInstance(Components.interfaces.nsILocalFile);
 			pipein.initWithPath(this.prefs.getCharPref("lyxserver") + ".in");
 		} catch (e) {
-			win.alert("Wrong path to Lyx server:\n"
-					+ this.prefs.getCharPref("lyxserver") + "\n" + e);
+			win.alert("Wrong path to Lyx server:\n" +
+					  this.prefs.getCharPref("lyxserver") + "\n" + e);
 			return false;
 		}
 
@@ -271,8 +271,9 @@ Zotero.Lyz = {
     _lyxAskServer: function(command){
     	// Works in Linux
         var win = this.wm.getMostRecentWindow("navigator:browser");
+		var cstream;
         try {
-            var cstream = this.lyxPipeInit();            
+            cstream = this.lyxPipeInit();            
         } catch (x) {
             win.alert("SERVER ERROR:\n"+x);
             return null;
@@ -330,549 +331,11 @@ Zotero.Lyz = {
 		}
 	},
 
-	addNewDocument : function(doc, bib) {
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			this.DB.query("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
-		} else {
-			this.DB.queryTx("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
-		}
-	},
-
-	checkDocInDB : function() {
-		var doc, res;
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		doc = this.lyxGetDoc();
-		if (!doc) {
-			win.alert("Could not retrieve document name.");
-			return null;
-		}
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			res = this.DB.query("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
-		} else {
-			res = this.DB.queryTx("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
-		}
-		if (!res) {
-			return [ res, doc ];
-		}
-		return [ res[0]['bib'], doc ];
-	},
-
-	checkAndCite : function() {
-		if (this.lyzDisableCheck()) {
-			return
-		}
-		// export citation to Bibtex
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var zitems = win.ZoteroPane.getSelectedItems();
-//		///////
-//		//var key = zitems[0].key;
-//		win.alert(zitems[0].key);
-//		var key = "0_MQP2MZSJ";
-//		var item = this.getZoteroItem(key);
-//		win.alert(item.firstCreator);
-//		var items = new Array();
-//		items.push(item);
-//		
-//		var text;
-//
-//		var callback = function(obj, worked) {
-//			// FIXME: the Zotero API has changed from obj.output
-//			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
-//			alert("TEST\n"+worked+text);
-//			if (!text) {// this is for Zotero 2.0.9
-//				text = obj.output.replace(/\r\n/g, "\n");
-//			}
-//		};
-//
-//		var translation = new Zotero.Translate.Export;
-//		translation.noWait = true;
-//		var translatorID = this.prefs.getCharPref("selectedTranslator");
-//		translation.setTranslator(translatorID);
-//		translation.setHandler("done", callback);
-//		
-//
-//		translation.setItems([item]);
-//		translation.translate();
-//		win.alert("UPDATE\n"+text);
-//		a
-//		///////
-		// FIXME: this should be called bellow, but it returns empty there (???)
-		if (!zitems.length) {
-			win.alert("Please select at least one citation.");
-			return;
-		}
-		// check document name
-		var res = this.checkDocInDB();
-		var bib = res[0];
-		var doc = res[1];
-		var bib_file;
-		var items;
-		var keys;
-		var entries_text = "";
-		var citekey;
-		var text;
-		if (!bib) {
-			t = "Press OK to create new BibTeX database.\n";
-			t += "Press Cancel to select from your existing databases\n";
-
-			// FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
-			// var check = { value: true };
-			// var ifps = Components.interfaces.nsIPromptService;
-			// var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
-			// promptService = promptService.QueryInterface(ifps);
-			// var res = confirm(t,"BibTex databse selection",
-			// 		      ifps.STD_YES_NO_BUTTONS,null,null,null,"",check);
-			var res = win.confirm(t, "BibTex database selection");
-			if (res) {
-				bib_file = this.dialog_FilePickerSave(win,
-						"Select Bibtex file for " + doc, "Bibtex", "*.bib");
-				if (!bib_file)
-					return;
-
-			} else {
-				bib_file = this.dialog_FilePickerOpen(win,
-						"Select Bibtex file for " + doc, "Bibtex", "*.bib");
-				if (!bib_file)
-					return;
-			}
-
-			bib = bib_file.path;
-			if (bib_file)
-				this.addNewDocument(doc, bib);
-			else
-				return;//file dialog canceled
-		}
-		items = this.exportToBibtex(zitems, bib);
-		var keys = new Array();
-		var zids = new Array();
-
-		for ( var zid in items) {
-			citekey = items[zid][0];
-			text = items[zid][1];
-			keys.push(citekey);
-			//check database, if not in, append to entries_text
-			//single key can be associated with several bibtex files
-			if (Zotero.version.split('.')[0] < 5) {
-				// XXX: Legacy 4.0
-				var res = this.DB.query("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
-			} else {
-				var res = this.DB.queryTx("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
-			}
-
-			if (!res) {
-				if (Zotero.version.split('.')[0] < 5) {
-					// XXX: Legacy 4.0
-					this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
-				} else {
-					this.DB.queryTx("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
-				}
-				zids.push(zid);
-				entries_text += text;
-			} else if (res[0]['key'] != citekey) {
-				var ask = win
-						.confirm(
-								"Zotero record has been changed.\n"
-										+ "Press OK to run 'Update BibTeX' and insert the citation.\n"
-										+ "Press Cancel to refrain from any action.",
-								"Zotero record changed!");
-				if (ask) {
-					// FIXME: started to act weird
-					var xy = this.lyxGetPos();
-					this.updateBibtexAll();
-					if (this.os == "Win"){
-						this.lyxAskServer("server-set-xy:" + xy);
-					} else {
-						this._lyxAskServer("server-set-xy:" + xy);
-					}
-				} else {
-					return;
-				}
-			}
-		}
-		if (!entries_text == "") {
-			this.writeBib(bib, entries_text, zids);
-		}
-		
-		if (this.os == "Win"){
-			res = this.lyxAskServer("citation-insert:" + keys.join(","));
-		} else {
-			res = this._lyxAskServer("citation-insert:" + keys.join(","));
-		}
-		
-
-	},
-
-	createCiteKey : function(id, text, bib, obj_key) {
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
-		// TODO if item has been deleted from Zotero and added again it will have a new key
-		// basically now way to know.
-		var oldkey = ckre.exec(text)[1];
-		var dic = new Array();
-		// current format is 0_XXXXXXX where 0 is "library id", not sure what that is for
-		dic["zotero"] = id;
-		if (this.prefs.getCharPref("citekey") == "zotero") {
-			var citekey = id;
-			text = text.replace(oldkey, citekey);
-			return [ citekey, text ];
-		}
-		
-		else if (this.prefs.getCharPref("citekey") == "zoteroShort"){
-		    var citekey = obj_key;
-		    text = text.replace(oldkey,citekey);
-		    return [citekey,text];
-		}
-
-		var creators;
-		var authors;
-		var author;
-		var c = "";
-		var chars = "";
-		var t;
-		var title;
-		var year;
-		var p;
-		var citekey = "";
-
-		// NAME
-		ckre = /author\s?=\s?\{(.*)\},?\n/;
-		creators = ckre.exec(text);
-		if (!creators) {
-			ckre = /editor\s?=\s?\{(.*)\},?\n/;
-			creators = ckre.exec(text);
-		}
-		try {
-			authors = creators[1];
-		} catch (e) {
-			authors = null;
-		}
-
-		if (authors) {
-			if (authors.split(" and ").length > 1) {
-				author = authors.split(" and ")[0].split(",");
-				author = author[0].toLowerCase();
-			} else {
-				author = authors.split(",");
-				author = author[0].toLowerCase();
-			}
-			// check for non-latin names
-			var non_latin;
-			if (author[0].charCodeAt() > 7929) {
-				non_latin = true;
-				author = author.toSource().split("\\u")[1];
-			}
-			
-			var tmp = "";
-			for ( var i in author) {
-				if (author[i] in lyz_charmap)
-					tmp += lyz_charmap[author[i]];
-				else
-					tmp += author[i];
-			}
-			author = tmp;
-
-		} else {
-			author = "";
-		}
-
-		dic["author"] = author;
-
-		// TITLE
-		if (non_latin) {
-			title = "";
-		} else {
-			ckre = /title = \{(.*)\},\n/;
-			t = ckre.exec(text)[1].toLowerCase();
-			t = t.replace(/[^a-z0-9\s]/g, "");
-			t = t.split(" ");
-			t.reverse();
-			title = t.pop();
-			// the if statement is there because of short titles, e.g. Ema
-			if (title < 6) {// the, a, on, about
-				if (t.length > 0)
-					title += t.pop();
-			}
-			if (title.length < 7) {
-				if (t.length > 0)
-					title += t.pop();
-			}
-		}
-		dic["title"] = title;
-		// YEAR
-		ckre = /[\s,]+(year|date)\s*=\s*\{\D*(\d+)[^\}]*\},?/; //.*year\s?=\s?\{(.*)\},?/;
-		try {
-			year = ckre.exec(text)[2].replace(" ", "");
-		} catch (e) {
-			//win.alert("All entries should to be dated. Please add a date to:\n"+text);
-			year = "";
-		}
-		dic["year"] = year;
-		// custom cite key
-		p = this.prefs.getCharPref("citekey").split(" ");
-		for ( var i = 0; i < p.length; i++) {
-			if (p[i] in dic) {
-				citekey += dic[p[i]];
-			} else
-				citekey += p[i];
-		}
-
-		var re = /\\.\{/g;
-		citekey = citekey.replace(re, "");
-		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
-		citekey = citekey.replace(re, "");
-		//check if cite key exists
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
-		} else {
-			var res = this.DB.queryTx("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
-		}
-		if (res.length > 0)
-			citekey += (res.length + 1);
-		text = text.replace(oldkey, citekey);
-		return [ citekey, text ];
-	},
-
 	exportToBibliography : function(item) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var format = "bibliography=http://www.zotero.org/styles/chicago-author-date";
 		var biblio = Zotero.QuickCopy.getContentFromItems([ item ], format);
 		return biblio.text;
-	},
-
-	exportToBibtex : function(items, bib, zids) {
-		// returns hash {id:[citekey,text]}
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var text;
-
-		var callback = function(obj, worked) {
-			// FIXME: the Zotero API has changed from obj.output
-			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
-			if (!text) {// this is for Zotero 2.0.9
-				text = obj.output.replace(/\r\n/g, "\n");
-			}
-		};
-
-		var translation = new Zotero.Translate.Export;
-		var translatorID = this.prefs.getCharPref("selectedTranslator");
-		translation.setTranslator(translatorID);
-		translation.setHandler("done", callback);
-		
-		if (this.prefs.getBoolPref("use_utf8")){
-			translation.setDisplayOptions({"exportCharset" : "UTF-8"});
-		} else {
-			translation.setDisplayOptions({"exportCharset" : "escape"});
-		}
-		if (this.prefs.getBoolPref("useJournalAbbreviation")){
-			translation.setDisplayOptions({"useJournalAbbreviation" : "True"});
-		}
-
-		var tmp = new Array();
-		for ( var i = 0; i < items.length; i++) {
-			// TODO: change to libraryKey
-			var id = Zotero.Items.getLibraryKeyHash(items[i]);
-			translation.setItems([ items[i] ]);
-			translation.translate();
-			var ct;
-			var itemOK = true;
-			if (this.prefs.getBoolPref("createCiteKey")==true){
-				// Workaround entries that have been deleted and added again to Zotero, which means they will have 
-				// new zotero id and we can't identify them. 
-				try {
-					ct = this.createCiteKey(id, text, bib, items[i].key);
-				} catch(e){
-					
-					if (Zotero.version.split('.')[0] < 5) {
-						// XXX: Legacy 4.0
-						var res = this.DB.query("SELECT key FROM keys WHERE zid=?",[zids[i]]);
-					} else {
-						var res = this.DB.queryTx("SELECT key FROM keys WHERE zid=?",[zids[i]]);
-					}
-					win.alert("There is problem with one the entries:\nZotero ID: "+zids[i]+"\nBibTeX Key: "+res[0]["key"]+
-							"\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
-							"You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
-							"If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
-							"If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
-							);
-					if (Zotero.version.split('.')[0] < 5) {
-						// XXX: Legacy 4.0
-						this.DB.query("DELETE FROM keys WHERE zid=?",[zids[i]]);
-					} else {
-						this.DB.queryTx("DELETE FROM keys WHERE zid=?",[zids[i]]);
-					}
-					itemOK = false;
-				}
-			} else {
-				var ckre = /.*@[a-z]+\{([^,]+),{1}/;
-				var key = ckre.exec(text)[1];
-				ct = [key, text];
-			}
-			if (itemOK)	tmp[id] = [ ct[0], ct[1] ];
-		}
-
-		return tmp;
-	},
-
-	dbDeleteBib : function() {
-		if (this.lyzDisableCheck()) {
-			return
-		}
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			var dic = this.DB.query("SELECT bib FROM docs GROUP BY bib");
-		} else {
-			var dic = this.DB.queryTx("SELECT bib FROM docs GROUP BY bib");
-		}
-		var params = {
-			inn : {
-				items : dic,
-				type : "bib"
-			},
-			out : null
-		};
-		var res = win.openDialog("chrome://lyz/content/select.xul", "",
-				"chrome, dialog, modal, centerscreen, resizable=yes", params);
-		if (!params.out)
-			return;
-		var bib;
-		if (params.out) {
-			bib = params.out.item;
-		}
-		var res = win
-				.confirm(
-						"You are about to delete record of BibTeX database:\n"
-								+ bib
-								+ "\nRecord about associated documents will also be deleted.\n",
-						"Deleting LyZ database record");
-		if (!res)
-			return;
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			this.DB.query("DELETE FROM docs WHERE bib=?",[bib]);
-			this.DB.query("DELETE FROM keys WHERE bib=?",[bib]);
-		} else {
-			this.DB.queryTx("DELETE FROM docs WHERE bib=?",[bib]);
-			this.DB.queryTx("DELETE FROM keys WHERE bib=?",[bib]);
-		}
-	},
-
-	dbDeleteDoc : function(doc, bib) {
-		if (this.lyzDisableCheck()) {
-			return
-		}
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			var dic = this.DB.query("SELECT doc FROM docs");
-		} else {
-			var dic = this.DB.queryTx("SELECT doc FROM docs");
-		}
-		var params = {
-			inn : {
-				items : dic,
-				type : "doc"
-			},
-			out : null
-		};
-		var res = win.openDialog("chrome://lyz/content/select.xul", "",
-				"chrome, dialog, modal, centerscreen, resizable=yes", params);
-		if (!params.out)
-			return;
-
-		var doc;
-		if (params.out) {
-			doc = params.out.item;
-		}
-		var res = win.confirm("Do you really want to delete the LyZ database record of the document\n" 
-				+ doc + "?");
-		if (!res)
-			return;
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			this.DB.query("DELETE FROM docs WHERE doc=?",[doc]);
-		} else {
-			this.DB.queryTx("DELETE FROM docs WHERE doc=?",[doc]);
-		}
-	},
-
-	dbRenameDoc : function() {
-		if (this.lyzDisableCheck()) {
-			return
-		}
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			var dic = this.DB.query("SELECT id,doc FROM docs");
-		} else {
-			var dic = this.DB.queryTx("SELECT id,doc FROM docs");
-		}
-		var params = {
-			inn : {
-				items : dic,
-				type : "doc"
-			},
-			out : null
-		};
-		var res = win.openDialog("chrome://lyz/content/select.xul", "",
-				"chrome, dialog, modal, centerscreen, resizable=yes", params);
-		if (!params.out)
-			return;
-		var doc;
-		if (params.out) {
-			doc = params.out.item;
-		}
-		var newfname = this.dialog_FilePickerOpen(win,
-				"Select LyX document for " + doc, "LyX", "*.lyx").path;
-		// have to replace \ with / on windows because lyxserver returns unix style paths
-		newfname = newfname.replace(/\\/g, "/");
-		if (!newfname)
-			return;
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			this.DB.query("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
-		} else {
-			this.DB.queryTx("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
-		}
-	},
-
-	dbRenameBib : function() {
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			var dic = this.DB.query("SELECT DISTINCT bib FROM docs");
-		} else {
-			var dic = this.DB.queryTx("SELECT DISTINCT bib FROM docs");
-		}
-		var params = {
-			inn : {
-				items : dic,
-				type : "bib"
-			},
-			out : null
-		};
-		var res = win.openDialog("chrome://lyz/content/select.xul", "",
-				"chrome, dialog, modal, centerscreen, resizable=yes", params);
-		if (!params.out)
-			return;
-		var bib;
-		if (params.out) {
-			bib = params.out.item;
-		}
-		newfname = this.dialog_FilePickerOpen(win, "Select Bibtex file for "
-				+ bib, "Bibtex", "*.bib").path;
-		if (!newfname)
-			return;
-        if (Zotero.version.split('.')[0] < 5) {
-            // XXX: Legacy 4.0
-			this.DB.query("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
-			this.DB.query("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
-		} else {
-			this.DB.queryTx("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
-			this.DB.queryTx("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
-		}
 	},
 
 	syncBibtexKeyFormat : function(doc, oldkeys, newkeys) {
@@ -918,14 +381,14 @@ Zotero.Lyz = {
 			do {
 				hasmore = cstream.readLine(line);
 				var tmp = line.value;
-				if (tmp.search('key') == 0) {
+				if (tmp.search('key') === 0) {
 					var tmpkeys = re.exec(tmp)[1].split(',');
 					for ( var i = 0; i < tmpkeys.length; i++) {
 						var o = tmpkeys[i];
 						var n = newkeys[oldkeys[tmpkeys[i]]];
 						// user can have citations from alternative bibtex file
 						// ignore those
-						if (n != undefined)
+						if (n !== undefined)
 							tmp = tmp.replace(o, n);
 					}
 				}
@@ -981,176 +444,10 @@ Zotero.Lyz = {
 
 	objectMethods : function(obj) {
 		var output = '';
-		for (property in object) {
+		for (var property in object) {
 			output += property + ': ' + object[property] + '\n';
 		}
 		return output;
-	},
-
-	updateBibtexAll : function() {
-		if (this.lyzDisableCheck()) {
-			return
-		}
-		//first update from the bibtex file
-		
-		this.updateFromBibtexFile();
-		// update when zotero items are modified
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var res = this.checkDocInDB();
-		var doc = res[1];
-		var bib = res[0];
-		if (!bib) {
-			win.alert("There is no BibTeX database associated with the active LyX document: "
-							+ doc);
-			return;
-		}
-		var citekey = this.prefs.getCharPref("citekey");
-
-		
-		var p = win.confirm("You are going to update BibTeX database:\n\n"
-				+ bib + "\n\nCurrent BibTex key format \"" + citekey
-				+ "\" will be used.\nDo you want to continue?");
-		if (p) {
-			// get all ids for the bibtex file
-			if (Zotero.version.split('.')[0] < 5) {
-				// XXX: Legacy 4.0
-				var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
-			} else {
-				var ids_h = this.DB.queryTx("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
-			}
-			var ids = new Array();
-			var zids = new Array();
-			var oldkeys = new Array();
-			for ( var i = 0; i < ids_h.length; i++) {
-				var zid = ids_h[i]['zid'];
-				var item = this.getZoteroItem(zid);
-				ids.push(item);
-				zids.push(zid);
-				oldkeys[ids_h[i]['key']] = zid;
-			}
-
-			var ex = this.exportToBibtex(ids, bib, zids);
-			var zids = new Array();
-			var newkeys = new Array();
-			var text = "";
-			for ( var id in ex) {
-				text += ex[id][1];
-				zids.push(id);
-				newkeys[id] = ex[id][0];
-			}
-			if (!(oldkeys.length == newkeys.length)) {
-				win.alert("Aborting");
-				return;
-			}
-			this.replace = true;
-
-			// now is time to update db, bibtex and lyx
-			for ( var zid in newkeys) {
-				if (Zotero.version.split('.')[0] < 5) {
-					// XXX: Legacy 4.0
-					this.DB.query("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
-				} else {
-					this.DB.queryTx("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
-				}
-			}
-			this.writeBib(bib, text, zids);
-			res = win
-					.confirm("Your BibTeX database "
-							+ bib
-							+ " has been updated.\n"
-							+ "Do you also want to update the associated LyX documents?\n"
-							+ "This is only necessary when any author, title or year has been modified,\n"
-							+ "or when the BibTex key format has been changed.");
-			if (!res)
-				return;
-			// FIXME test again updating of all document associated with current bib
-			// var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
-			// if (tmp.length==1){
-			
-			if (this.os == "Win"){
-				this.lyxAskServer("buffer-write");
-				this.lyxAskServer("buffer-close");
-			} else {
-				this._lyxAskServer("buffer-write");
-				this._lyxAskServer("buffer-close");
-			}
-			
-			this.syncBibtexKeyFormat(doc, oldkeys, newkeys);
-			if (this.os == "Win"){
-				this.lyxAskServer("file-open:" + doc);
-			} else {
-				this._lyxAskServer("file-open:" + doc);
-			}
-			
-			// } else {
-			// 	var docs = new Array();
-			// 	var open_docs = this.lyxGetOpenDocs();
-			//     this.pause(100);
-			// 	this.lyxPipeWrite("buffer-write-all");
-			// 	for (var i=0;i<open_docs.length;i++){
-			//         this.pause(100);
-			// 	    this.lyxPipeWrite("buffer-close");
-			// 	}
-			// 	for (var k=0;k<tmp.length;k++){
-			// 	    var d = tmp[k]['doc'];
-			// 	    this.syncBibtexKeyFormat(d,oldkeys,newkeys);
-			// 	}
-
-			// 	for (var j=0;j<open_docs.length;j++){
-			//         this.pause(100);
-			// 	    this.lyxPipeWrite("file-open:"+open_docs[j]);
-			// 	}
-			// }   
-		}//end of if (p)
-	},
-
-	updateFromBibtexFile : function() {
-		var win = this.wm.getMostRecentWindow("navigator:browser");
-		var res = this.checkDocInDB();
-		var doc = res[1];
-		var bib = res[0];
-		if (!bib) {
-			win.alert("There is no BibTeX database associated with the active LyX document: "+ doc);
-			return;
-		}
-		var cstream = this.fileReadByLine(bib);
-		var line = {};
-		cstream.readLine(line); // read the whole file and put it in str.value
-		line = line.value;
-		cstream.close();
-		var ar = line.trim().split(" ");
-		var info = 0;
-		for ( var i = 0; i < ar.length; i++) {
-			var zid = ar[i];
-			if (Zotero.version.split('.')[0] < 5) {
-				// XXX: Legacy 4.0
-				res = this.DB.query("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
-			} else {
-				res = this.DB.queryTx("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
-			}
-
-			if (!res) {
-				/*info += zid + ": "
-						+ this.exportToBibliography(this.getZoteroItem(zid))
-						+ "\n";
-						*/
-				info+=1;
-				// key=zid is not right, but it will be updated when updateBibtex is run
-				if (Zotero.version.split('.')[0] < 5) {
-					// XXX: Legacy 4.0
-					res = this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
-				} else {
-					res = this.DB.queryTx("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
-				}
-				if (!res) {
-					win.alert("ERROR: INSERT INTO keys VALUES(null,\"" + zid
-							+ "\",\"" + bib + "\",\"" + zid + "\")");
-				}
-
-			}
-		}
-		if (info > 0)
-			win.alert(info + " item(s) changed or added.");
 	},
 
 	getZoteroItem : function(key) {
@@ -1376,8 +673,8 @@ Zotero.Lyz = {
 			}
 			win.alert("RESPONSE: " + t);
 		} catch (e) {
-			win.alert("Error connecting to lyxserver...\n" + e
-					+ "\nTry again.");
+			win.alert("Error connecting to lyxserver...\n" + e +
+					  "\nTry again.");
 		}
 		win.alert("DONE");
 	},
@@ -1388,6 +685,1259 @@ Zotero.Lyz = {
 		}
 	}
 };
+
+// Define property Zotero.Lyz[name] based on Zotero version (either 4.x or
+// lower or 5.x or higher)
+function defByZotVersion(name, z4func, z5func) {
+	let Zotero_GUID = 'zotero@chnm.gmu.edu'
+	let isStandalone = Services.appinfo.ID == Zotero_GUID 
+
+	function addFunc(version, name, z4func, z5func) {
+		if (version.split('.')[0] < 5) {
+			Zotero.Lyz[name] = z4func
+		} else {
+			Zotero.Lyz[name] = z5func
+		}
+	}
+
+	if (isStandalone) {
+		addFunc(Services.appinfo.version, name, z4func, z5func)
+	} else {
+		Components.utils.import("resource://gre/modules/AddonManager.jsm");
+		AddonManager.getAddonByID(
+			Zotero_GUID,
+			function (addon) {
+				addFunc(addon.version, name, z4func, z5func)
+			}
+		)
+	}
+}
+
+// Shim for Zotero 4 where Zotero.Promise is not defined
+if (typeof Zotero.Promise === "undefined") {
+	Zotero.Promise = {coroutine: function(func) {return}}
+}
+
+defByZotVersion('checkDocInDB', function() {
+		var doc, res;
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		doc = this.lyxGetDoc();
+		if (!doc) {
+			win.alert("Could not retrieve document name.");
+			return null;
+		}
+		res = this.DB.query("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
+		if (!res) {
+			return [ res, doc ];
+		}
+		return [res[0].bib, doc];
+	},
+	Zotero.Promise.coroutine(function*() {
+		var doc, res;
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		doc = this.lyxGetDoc();
+		if (!doc) {
+			win.alert("Could not retrieve document name.");
+			return null;
+		}
+		res = yield this.DB.queryAsync("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
+		if (res.length === 0) {
+			return [ res, doc ];
+		}
+		return [res[0].bib, doc];
+	})
+)
+
+defByZotVersion('addNewDocument',
+	function(doc, bib) {
+			this.DB.query("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
+	},
+	Zotero.Promise.coroutine(function*(doc, bib) {
+		yield this.DB.queryAsync("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
+	})
+)
+
+
+defByZotVersion('exportToBibtex',
+	function(items, bib, zids) {
+		// returns hash {id:[citekey,text]}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var text;
+
+		var callback = function(obj, worked) {
+			// FIXME: the Zotero API has changed from obj.output
+			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
+			if (!text) {// this is for Zotero 2.0.9
+				text = obj.output.replace(/\r\n/g, "\n");
+			}
+		};
+
+		var translation = new Zotero.Translate.Export;
+		var translatorID = this.prefs.getCharPref("selectedTranslator");
+		translation.setTranslator(translatorID);
+		translation.setHandler("done", callback);
+		
+		if (this.prefs.getBoolPref("use_utf8")){
+			translation.setDisplayOptions({"exportCharset" : "UTF-8"});
+		} else {
+			translation.setDisplayOptions({"exportCharset" : "escape"});
+		}
+		if (this.prefs.getBoolPref("useJournalAbbreviation")){
+			translation.setDisplayOptions({"useJournalAbbreviation" : "True"});
+		}
+
+		var tmp = [];
+		for ( var i = 0; i < items.length; i++) {
+			// TODO: change to libraryKey
+			var id = Zotero.Items.getLibraryKeyHash(items[i]);
+			translation.setItems([ items[i] ]);
+			translation.translate();
+			var ct;
+			var itemOK = true;
+			if (this.prefs.getBoolPref("createCiteKey")===true){
+				// Workaround entries that have been deleted and added again to Zotero, which means they will have 
+				// new zotero id and we can't identify them. 
+				try {
+					ct = this.createCiteKey(id, text, bib, items[i].key);
+				} catch(e){
+					
+					var res = this.DB.query("SELECT key FROM keys WHERE zid=?",[zids[i]]);
+					win.alert("There is problem with one the entries:\nZotero ID: "+zids[i]+"\nBibTeX Key: "+res[0].key+
+							"\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
+							"You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
+							"If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
+							"If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
+							);
+					this.DB.query("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					itemOK = false;
+				}
+			} else {
+				var ckre = /.*@[a-z]+\{([^,]+),{1}/;
+				var key = ckre.exec(text)[1];
+				ct = [key, text];
+			}
+			if (itemOK)	tmp[id] = [ ct[0], ct[1] ];
+		}
+
+		return tmp;
+	},
+	Zotero.Promise.coroutine(function*(items, bib, zids) {
+		// returns hash {id:[citekey,text]}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var text;
+
+		var callback = function(obj, worked) {
+			// FIXME: the Zotero API has changed from obj.output
+			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
+			if (!text) {// this is for Zotero 2.0.9
+				text = obj.output.replace(/\r\n/g, "\n");
+			}
+		};
+
+		var translation = new Zotero.Translate.Export;
+		var translatorID = this.prefs.getCharPref("selectedTranslator");
+		translation.setTranslator(translatorID);
+		translation.setHandler("done", callback);
+		
+		if (this.prefs.getBoolPref("use_utf8")){
+			translation.setDisplayOptions({"exportCharset" : "UTF-8"});
+		} else {
+			translation.setDisplayOptions({"exportCharset" : "escape"});
+		}
+		if (this.prefs.getBoolPref("useJournalAbbreviation")){
+			translation.setDisplayOptions({"useJournalAbbreviation" : "True"});
+		}
+
+		var tmp = [];
+		for ( var i = 0; i < items.length; i++) {
+			// TODO: change to libraryKey
+			var id = Zotero.Items.getLibraryKeyHash(items[i]);
+			translation.setItems([ items[i] ]);
+			// XXX: Not setting value of text
+			yield translation.translate();
+			var ct;
+			var itemOK = true;
+			if (this.prefs.getBoolPref("createCiteKey")===true){
+				// Workaround entries that have been deleted and added again to Zotero, which means they will have 
+				// new zotero id and we can't identify them. 
+				try {
+					ct = yield this.createCiteKey(id, text, bib, items[i].key);
+				} catch(e){
+					
+					var res = yield this.DB.queryAsync("SELECT key FROM keys WHERE zid=?",[zids[i]]);
+					win.alert("There is problem with one the entries:\nZotero ID: "+zids[i]+"\nBibTeX Key: "+res[0].key+
+							"\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
+							"You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
+							"If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
+							"If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
+							);
+					yield this.DB.queryAsync("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					itemOK = false;
+				}
+			} else {
+				var ckre = /.*@[a-z]+\{([^,]+),{1}/;
+				var key = ckre.exec(text)[1];
+				ct = [key, text];
+			}
+			if (itemOK)	tmp[id] = [ ct[0], ct[1] ];
+		}
+
+		return tmp;
+	})
+)
+
+defByZotVersion('createCiteKey',
+	function(id, text, bib, obj_key) {
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
+		// TODO if item has been deleted from Zotero and added again it will have a new key
+		// basically now way to know.
+		var oldkey = ckre.exec(text)[1];
+		var dic = [];
+		// current format is 0_XXXXXXX where 0 is "library id", not sure what that is for
+		dic.zotero = id;
+		var citekey
+		if (this.prefs.getCharPref("citekey") == "zotero") {
+			citekey = id;
+			text = text.replace(oldkey, citekey);
+			return [ citekey, text ];
+		}
+		
+		else if (this.prefs.getCharPref("citekey") == "zoteroShort"){
+		    citekey = obj_key;
+		    text = text.replace(oldkey,citekey);
+		    return [citekey,text];
+		}
+
+		var creators;
+		var authors;
+		var author;
+		var c = "";
+		var chars = "";
+		var t;
+		var title;
+		var year;
+		var p;
+		citekey = "";
+
+		// NAME
+		ckre = /author\s?=\s?\{(.*)\},?\n/;
+		creators = ckre.exec(text);
+		if (!creators) {
+			ckre = /editor\s?=\s?\{(.*)\},?\n/;
+			creators = ckre.exec(text);
+		}
+		try {
+			authors = creators[1];
+		} catch (e) {
+			authors = null;
+		}
+
+		var non_latin;
+		if (authors) {
+			if (authors.split(" and ").length > 1) {
+				author = authors.split(" and ")[0].split(",");
+				author = author[0].toLowerCase();
+			} else {
+				author = authors.split(",");
+				author = author[0].toLowerCase();
+			}
+			// check for non-latin names
+			if (author[0].charCodeAt() > 7929) {
+				non_latin = true;
+				author = author.toSource().split("\\u")[1];
+			}
+			
+			var tmp = "";
+			for ( var i in author) {
+				if (author[i] in lyz_charmap)
+					tmp += lyz_charmap[author[i]];
+				else
+					tmp += author[i];
+			}
+			author = tmp;
+
+		} else {
+			author = "";
+		}
+
+		dic.author = author;
+
+		// TITLE
+		if (non_latin) {
+			title = "";
+		} else {
+			ckre = /title = \{(.*)\},\n/;
+			t = ckre.exec(text)[1].toLowerCase();
+			t = t.replace(/[^a-z0-9\s]/g, "");
+			t = t.split(" ");
+			t.reverse();
+			title = t.pop();
+			// the if statement is there because of short titles, e.g. Ema
+			if (title < 6) {// the, a, on, about
+				if (t.length > 0)
+					title += t.pop();
+			}
+			if (title.length < 7) {
+				if (t.length > 0)
+					title += t.pop();
+			}
+		}
+		dic.title = title;
+		// YEAR
+		ckre = /[\s,]+(year|date)\s*=\s*\{\D*(\d+)[^\}]*\},?/; //.*year\s?=\s?\{(.*)\},?/;
+		try {
+			year = ckre.exec(text)[2].replace(" ", "");
+		} catch (e) {
+			//win.alert("All entries should to be dated. Please add a date to:\n"+text);
+			year = "";
+		}
+		dic.year = year;
+		// custom cite key
+		p = this.prefs.getCharPref("citekey").split(" ");
+		for ( var i = 0; i < p.length; i++) {
+			if (p[i] in dic) {
+				citekey += dic[p[i]];
+			} else
+				citekey += p[i];
+		}
+
+		var re = /\\.\{/g;
+		citekey = citekey.replace(re, "");
+		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
+		citekey = citekey.replace(re, "");
+		//check if cite key exists
+		var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
+		if (res.length > 0)
+			citekey += (res.length + 1);
+		text = text.replace(oldkey, citekey);
+		return [ citekey, text ];
+	},
+	Zotero.Promise.coroutine(function*(id, text, bib, obj_key) {
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
+		// TODO if item has been deleted from Zotero and added again it will have a new key
+		// basically now way to know.
+		var oldkey = ckre.exec(text)[1];
+		var dic = [];
+		// current format is 0_XXXXXXX where 0 is "library id", not sure what that is for
+		dic.zotero = id;
+		var citekey;
+		if (this.prefs.getCharPref("citekey") == "zotero") {
+			citekey = id;
+			text = text.replace(oldkey, citekey);
+			return [ citekey, text ];
+		}
+		
+		else if (this.prefs.getCharPref("citekey") == "zoteroShort"){
+		    citekey = obj_key;
+		    text = text.replace(oldkey,citekey);
+		    return [citekey,text];
+		}
+
+		var creators;
+		var authors;
+		var author;
+		var c = "";
+		var chars = "";
+		var t;
+		var title;
+		var year;
+		var p;
+		citekey = "";
+
+		// NAME
+		ckre = /author\s?=\s?\{(.*)\},?\n/;
+		creators = ckre.exec(text);
+		if (!creators) {
+			ckre = /editor\s?=\s?\{(.*)\},?\n/;
+			creators = ckre.exec(text);
+		}
+		try {
+			authors = creators[1];
+		} catch (e) {
+			authors = null;
+		}
+
+		var non_latin;
+		if (authors) {
+			if (authors.split(" and ").length > 1) {
+				author = authors.split(" and ")[0].split(",");
+				author = author[0].toLowerCase();
+			} else {
+				author = authors.split(",");
+				author = author[0].toLowerCase();
+			}
+			// check for non-latin names
+			if (author[0].charCodeAt() > 7929) {
+				non_latin = true;
+				author = author.toSource().split("\\u")[1];
+			}
+			
+			var tmp = "";
+			for ( var i in author) {
+				if (author[i] in lyz_charmap)
+					tmp += lyz_charmap[author[i]];
+				else
+					tmp += author[i];
+			}
+			author = tmp;
+
+		} else {
+			author = "";
+		}
+
+		dic.author = author;
+
+		// TITLE
+		if (non_latin) {
+			title = "";
+		} else {
+			ckre = /title = \{(.*)\},\n/;
+			t = ckre.exec(text)[1].toLowerCase();
+			t = t.replace(/[^a-z0-9\s]/g, "");
+			t = t.split(" ");
+			t.reverse();
+			title = t.pop();
+			// the if statement is there because of short titles, e.g. Ema
+			if (title < 6) {// the, a, on, about
+				if (t.length > 0)
+					title += t.pop();
+			}
+			if (title.length < 7) {
+				if (t.length > 0)
+					title += t.pop();
+			}
+		}
+		dic.title = title;
+		// YEAR
+		ckre = /[\s,]+(year|date)\s*=\s*\{\D*(\d+)[^\}]*\},?/; //.*year\s?=\s?\{(.*)\},?/;
+		try {
+			year = ckre.exec(text)[2].replace(" ", "");
+		} catch (e) {
+			//win.alert("All entries should to be dated. Please add a date to:\n"+text);
+			year = "";
+		}
+		dic.year = year;
+		// custom cite key
+		p = this.prefs.getCharPref("citekey").split(" ");
+		for ( var i = 0; i < p.length; i++) {
+			if (p[i] in dic) {
+				citekey += dic[p[i]];
+			} else
+				citekey += p[i];
+		}
+
+		var re = /\\.\{/g;
+		citekey = citekey.replace(re, "");
+		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
+		citekey = citekey.replace(re, "");
+		//check if cite key exists
+		var res = yield this.DB.queryAsync("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
+		if (res.length > 0)
+			citekey += (res.length + 1);
+		text = text.replace(oldkey, citekey);
+		return [ citekey, text ];
+	})
+)
+
+defByZotVersion('checkAndCite',
+	function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		// export citation to Bibtex
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var zitems = win.ZoteroPane.getSelectedItems();
+//		///////
+//		//var key = zitems[0].key;
+//		win.alert(zitems[0].key);
+//		var key = "0_MQP2MZSJ";
+//		var item = this.getZoteroItem(key);
+//		win.alert(item.firstCreator);
+//		var items = new Array();
+//		items.push(item);
+//		
+//		var text;
+//
+//		var callback = function(obj, worked) {
+//			// FIXME: the Zotero API has changed from obj.output
+//			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
+//			alert("TEST\n"+worked+text);
+//			if (!text) {// this is for Zotero 2.0.9
+//				text = obj.output.replace(/\r\n/g, "\n");
+//			}
+//		};
+//
+//		var translation = new Zotero.Translate.Export;
+//		translation.noWait = true;
+//		var translatorID = this.prefs.getCharPref("selectedTranslator");
+//		translation.setTranslator(translatorID);
+//		translation.setHandler("done", callback);
+//		
+//
+//		translation.setItems([item]);
+//		translation.translate();
+//		win.alert("UPDATE\n"+text);
+//		a
+//		///////
+		// FIXME: this should be called bellow, but it returns empty there (???)
+		if (!zitems.length) {
+			win.alert("Please select at least one citation.");
+			return;
+		}
+		// check document name
+		var res = this.checkDocInDB();
+		var bib = res[0];
+		var doc = res[1];
+		var bib_file;
+		var items;
+		var keys;
+		var entries_text = "";
+		var citekey;
+		var text;
+		if (!bib) {
+			t = "Press OK to create new BibTeX database.\n";
+			t += "Press Cancel to select from your existing databases\n";
+
+			// FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
+			// var check = { value: true };
+			// var ifps = Components.interfaces.nsIPromptService;
+			// var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+			// promptService = promptService.QueryInterface(ifps);
+			// var res = confirm(t,"BibTex databse selection",
+			// 		      ifps.STD_YES_NO_BUTTONS,null,null,null,"",check);
+			res = win.confirm(t, "BibTex database selection");
+			if (res) {
+				bib_file = this.dialog_FilePickerSave(win,
+						"Select Bibtex file for " + doc, "Bibtex", "*.bib");
+				if (!bib_file)
+					return;
+
+			} else {
+				bib_file = this.dialog_FilePickerOpen(win,
+						"Select Bibtex file for " + doc, "Bibtex", "*.bib");
+				if (!bib_file)
+					return;
+			}
+
+			bib = bib_file.path;
+			if (bib_file)
+				this.addNewDocument(doc, bib);
+			else
+				return;//file dialog canceled
+		}
+		items = this.exportToBibtex(zitems, bib);
+		keys = [];
+		var zids = [];
+
+		for ( var zid in items) {
+			citekey = items[zid][0];
+			text = items[zid][1];
+			keys.push(citekey);
+			//check database, if not in, append to entries_text
+			//single key can be associated with several bibtex files
+			res = this.DB.query("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
+
+			if (!res) {
+				this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
+				zids.push(zid);
+				entries_text += text;
+			} else if (res[0].key != citekey) {
+				var ask = win
+						.confirm(
+								"Zotero record has been changed.\n" +
+							    "Press OK to run 'Update BibTeX' and insert the citation.\n" +
+							    "Press Cancel to refrain from any action.",
+								"Zotero record changed!");
+				if (ask) {
+					// FIXME: started to act weird
+					var xy = this.lyxGetPos();
+					this.updateBibtexAll();
+					if (this.os == "Win"){
+						this.lyxAskServer("server-set-xy:" + xy);
+					} else {
+						this._lyxAskServer("server-set-xy:" + xy);
+					}
+				} else {
+					return;
+				}
+			}
+		}
+		if (!entries_text == "") {
+			this.writeBib(bib, entries_text, zids);
+		}
+		
+		if (this.os == "Win"){
+			res = this.lyxAskServer("citation-insert:" + keys.join(","));
+		} else {
+			res = this._lyxAskServer("citation-insert:" + keys.join(","));
+		}
+		
+
+	},
+	Zotero.Promise.coroutine(function*() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		// export citation to Bibtex
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var zitems = win.ZoteroPane.getSelectedItems();
+//		///////
+//		//var key = zitems[0].key;
+//		win.alert(zitems[0].key);
+//		var key = "0_MQP2MZSJ";
+//		var item = this.getZoteroItem(key);
+//		win.alert(item.firstCreator);
+//		var items = new Array();
+//		items.push(item);
+//		
+//		var text;
+//
+//		var callback = function(obj, worked) {
+//			// FIXME: the Zotero API has changed from obj.output
+//			text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
+//			alert("TEST\n"+worked+text);
+//			if (!text) {// this is for Zotero 2.0.9
+//				text = obj.output.replace(/\r\n/g, "\n");
+//			}
+//		};
+//
+//		var translation = new Zotero.Translate.Export;
+//		translation.noWait = true;
+//		var translatorID = this.prefs.getCharPref("selectedTranslator");
+//		translation.setTranslator(translatorID);
+//		translation.setHandler("done", callback);
+//		
+//
+//		translation.setItems([item]);
+//		translation.translate();
+//		win.alert("UPDATE\n"+text);
+//		a
+//		///////
+		// FIXME: this should be called bellow, but it returns empty there (???)
+		if (!zitems.length) {
+			win.alert("Please select at least one citation.");
+			return;
+		}
+		// check document name
+		var res = yield this.checkDocInDB();
+		var bib = res[0];
+		var doc = res[1];
+		var bib_file;
+		var items;
+		var keys;
+		var entries_text = "";
+		var citekey;
+		var text;
+		if (bib.length === 0) {
+			t = "Press OK to create new BibTeX database.\n";
+			t += "Press Cancel to select from your existing databases\n";
+
+			// FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
+			// var check = { value: true };
+			// var ifps = Components.interfaces.nsIPromptService;
+			// var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
+			// promptService = promptService.QueryInterface(ifps);
+			// var res = confirm(t,"BibTex databse selection",
+			// 		      ifps.STD_YES_NO_BUTTONS,null,null,null,"",check);
+			res = win.confirm(t, "BibTex database selection");
+			if (res) {
+				bib_file = this.dialog_FilePickerSave(win,
+						"Select Bibtex file for " + doc, "Bibtex", "*.bib");
+				if (!bib_file)
+					return;
+
+			} else {
+				bib_file = this.dialog_FilePickerOpen(win,
+						"Select Bibtex file for " + doc, "Bibtex", "*.bib");
+				if (!bib_file)
+					return;
+			}
+
+			bib = bib_file.path;
+			if (bib_file)
+				yield this.addNewDocument(doc, bib);
+			else
+				return;//file dialog canceled
+		}
+		items = yield this.exportToBibtex(zitems, bib);
+		keys = [];
+		var zids = [];
+
+		for ( var zid in items) {
+			citekey = items[zid][0];
+			text = items[zid][1];
+			keys.push(citekey);
+			//check database, if not in, append to entries_text
+			//single key can be associated with several bibtex files
+			res = yield this.DB.queryAsync("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
+
+			if (res.length === 0) {
+				yield this.DB.queryAsync("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
+				zids.push(zid);
+				entries_text += text;
+			} else if (res[0].key != citekey) {
+				var ask = win
+						.confirm(
+								"Zotero record has been changed.\n" +
+							    "Press OK to run 'Update BibTeX' and insert the citation.\n" +
+								"Press Cancel to refrain from any action.",
+								"Zotero record changed!");
+				if (ask) {
+					// FIXME: started to act weird
+					var xy = this.lyxGetPos();
+					this.updateBibtexAll();
+					if (this.os == "Win"){
+						this.lyxAskServer("server-set-xy:" + xy);
+					} else {
+						this._lyxAskServer("server-set-xy:" + xy);
+					}
+				} else {
+					return;
+				}
+			}
+		}
+		if (!entries_text == "") {
+			this.writeBib(bib, entries_text, zids);
+		}
+		
+		if (this.os == "Win"){
+			res = this.lyxAskServer("citation-insert:" + keys.join(","));
+		} else {
+			res = this._lyxAskServer("citation-insert:" + keys.join(","));
+		}
+	})
+)
+
+defByZotVersion('updateBibtexAll',
+	function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		//first update from the bibtex file
+		
+		this.updateFromBibtexFile();
+		// update when zotero items are modified
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var res = this.checkDocInDB();
+		var doc = res[1];
+		var bib = res[0];
+		if (!bib) {
+			win.alert("There is no BibTeX database associated with the active LyX document: " +
+					  doc);
+			return;
+		}
+		var citekey = this.prefs.getCharPref("citekey");
+
+		
+		var p = win.confirm("You are going to update BibTeX database:\n\n" +
+				 			bib + "\n\nCurrent BibTex key format \"" + citekey +
+							"\" will be used.\nDo you want to continue?");
+		if (p) {
+			// get all ids for the bibtex file
+			var ids_h = this.DB.query("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
+			var ids = [];
+			var zids = [];
+			var oldkeys = [];
+			var zid;
+			for ( var i = 0; i < ids_h.length; i++) {
+				zid = ids_h[i].zid;
+				var item = this.getZoteroItem(zid);
+				ids.push(item);
+				zids.push(zid);
+				oldkeys[ids_h[i].key] = zid;
+			}
+
+			var ex = this.exportToBibtex(ids, bib, zids);
+			zids = [];
+			var newkeys = [];
+			var text = "";
+			for ( var id in ex) {
+				text += ex[id][1];
+				zids.push(id);
+				newkeys[id] = ex[id][0];
+			}
+			if (!(oldkeys.length == newkeys.length)) {
+				win.alert("Aborting");
+				return;
+			}
+			this.replace = true;
+
+			// now is time to update db, bibtex and lyx
+			for ( zid in newkeys) {
+				this.DB.query("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
+			}
+			this.writeBib(bib, text, zids);
+			res = win
+					.confirm("Your BibTeX database " + bib +
+							 " has been updated.\n" +
+							 "Do you also want to update the associated LyX documents?\n" +
+							 "This is only necessary when any author, title or year has been modified,\n" +
+							 "or when the BibTex key format has been changed.");
+			if (!res)
+				return;
+			// FIXME test again updating of all document associated with current bib
+			// var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
+			// if (tmp.length==1){
+			
+			if (this.os == "Win"){
+				this.lyxAskServer("buffer-write");
+				this.lyxAskServer("buffer-close");
+			} else {
+				this._lyxAskServer("buffer-write");
+				this._lyxAskServer("buffer-close");
+			}
+			
+			this.syncBibtexKeyFormat(doc, oldkeys, newkeys);
+			if (this.os == "Win"){
+				this.lyxAskServer("file-open:" + doc);
+			} else {
+				this._lyxAskServer("file-open:" + doc);
+			}
+			
+			// } else {
+			// 	var docs = new Array();
+			// 	var open_docs = this.lyxGetOpenDocs();
+			//     this.pause(100);
+			// 	this.lyxPipeWrite("buffer-write-all");
+			// 	for (var i=0;i<open_docs.length;i++){
+			//         this.pause(100);
+			// 	    this.lyxPipeWrite("buffer-close");
+			// 	}
+			// 	for (var k=0;k<tmp.length;k++){
+			// 	    var d = tmp[k]['doc'];
+			// 	    this.syncBibtexKeyFormat(d,oldkeys,newkeys);
+			// 	}
+
+			// 	for (var j=0;j<open_docs.length;j++){
+			//         this.pause(100);
+			// 	    this.lyxPipeWrite("file-open:"+open_docs[j]);
+			// 	}
+			// }   
+		}//end of if (p)
+	},
+	Zotero.Promise.coroutine(function*() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		//first update from the bibtex file
+		
+		yield this.updateFromBibtexFile();
+		// update when zotero items are modified
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var res = yield this.checkDocInDB();
+		var doc = res[1];
+		var bib = res[0];
+		if (!bib) {
+			win.alert("There is no BibTeX database associated with the active LyX document: " +
+					  doc);
+			return;
+		}
+		var citekey = this.prefs.getCharPref("citekey");
+
+		
+		var p = win.confirm("You are going to update BibTeX database:\n\n" +
+							bib + "\n\nCurrent BibTex key format \"" + citekey +
+							"\" will be used.\nDo you want to continue?");
+		if (p) {
+			// get all ids for the bibtex file
+			var ids_h = yield this.DB.queryAsync("SELECT zid,key FROM keys WHERE bib=? GROUP BY zid",[bib]);
+			var ids = [];
+			var zids = [];
+			var oldkeys = [];
+			var zid;
+			for ( var i = 0; i < ids_h.length; i++) {
+				zid = ids_h[i].zid;
+				var item = this.getZoteroItem(zid);
+				ids.push(item);
+				zids.push(zid);
+				oldkeys[ids_h[i].key] = zid;
+			}
+
+			var ex = yield this.exportToBibtex(ids, bib, zids);
+			zids = [];
+			var newkeys = [];
+			var text = "";
+			for ( var id in ex) {
+				text += ex[id][1];
+				zids.push(id);
+				newkeys[id] = ex[id][0];
+			}
+			if (!(oldkeys.length == newkeys.length)) {
+				win.alert("Aborting");
+				return;
+			}
+			this.replace = true;
+
+			// now is time to update db, bibtex and lyx
+			for ( zid in newkeys) {
+				yield this.DB.queryAsync("UPDATE keys SET key=? WHERE zid=? AND bib=?",[newkeys[zid],zid,bib]);
+			}
+			this.writeBib(bib, text, zids);
+			res = win
+					.confirm("Your BibTeX database " + bib +
+							 " has been updated.\n" +
+							 "Do you also want to update the associated LyX documents?\n" +
+							 "This is only necessary when any author, title or year has been modified,\n" +
+							 "or when the BibTex key format has been changed.");
+			if (!res)
+				return;
+			// FIXME test again updating of all document associated with current bib
+			// var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");	    
+			// if (tmp.length==1){
+			
+			if (this.os == "Win"){
+				this.lyxAskServer("buffer-write");
+				this.lyxAskServer("buffer-close");
+			} else {
+				this._lyxAskServer("buffer-write");
+				this._lyxAskServer("buffer-close");
+			}
+			
+			this.syncBibtexKeyFormat(doc, oldkeys, newkeys);
+			if (this.os == "Win"){
+				this.lyxAskServer("file-open:" + doc);
+			} else {
+				this._lyxAskServer("file-open:" + doc);
+			}
+			
+			// } else {
+			// 	var docs = new Array();
+			// 	var open_docs = this.lyxGetOpenDocs();
+			//     this.pause(100);
+			// 	this.lyxPipeWrite("buffer-write-all");
+			// 	for (var i=0;i<open_docs.length;i++){
+			//         this.pause(100);
+			// 	    this.lyxPipeWrite("buffer-close");
+			// 	}
+			// 	for (var k=0;k<tmp.length;k++){
+			// 	    var d = tmp[k]['doc'];
+			// 	    this.syncBibtexKeyFormat(d,oldkeys,newkeys);
+			// 	}
+
+			// 	for (var j=0;j<open_docs.length;j++){
+			//         this.pause(100);
+			// 	    this.lyxPipeWrite("file-open:"+open_docs[j]);
+			// 	}
+			// }   
+		}//end of if (p)
+	})
+)
+
+defByZotVersion('updateFromBibtexFile',
+	function() {
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var res = this.checkDocInDB();
+		var doc = res[1];
+		var bib = res[0];
+		if (!bib) {
+			win.alert("There is no BibTeX database associated with the active LyX document: "+ doc);
+			return;
+		}
+		var cstream = this.fileReadByLine(bib);
+		var line = {};
+		cstream.readLine(line); // read the whole file and put it in str.value
+		line = line.value;
+		cstream.close();
+		var ar = line.trim().split(" ");
+		var info = 0;
+		for ( var i = 0; i < ar.length; i++) {
+			var zid = ar[i];
+			res = this.DB.query("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
+
+			if (!res) {
+				/*info += zid + ": "
+						+ this.exportToBibliography(this.getZoteroItem(zid))
+						+ "\n";
+						*/
+				info+=1;
+				// key=zid is not right, but it will be updated when updateBibtex is run
+				res = this.DB.query("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
+				if (!res) {
+					win.alert("ERROR: INSERT INTO keys VALUES(null,\"" + zid +
+							  "\",\"" + bib + "\",\"" + zid + "\")");
+				}
+
+			}
+		}
+		if (info > 0)
+			win.alert(info + " item(s) changed or added.");
+	},
+	Zotero.Promise.coroutine(function*() {
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var res = yield this.checkDocInDB();
+		var doc = res[1];
+		var bib = res[0];
+		if (!bib) {
+			win.alert("There is no BibTeX database associated with the active LyX document: "+ doc);
+			return;
+		}
+		var cstream = this.fileReadByLine(bib);
+		var line = {};
+		cstream.readLine(line); // read the whole file and put it in str.value
+		line = line.value;
+		cstream.close();
+		var ar = line.trim().split(" ");
+		var info = 0;
+		for ( var i = 0; i < ar.length; i++) {
+			var zid = ar[i];
+			res = yield this.DB.queryAsync("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
+
+			if (res.length === 0) {
+				/*info += zid + ": "
+						+ this.exportToBibliography(this.getZoteroItem(zid))
+						+ "\n";
+						*/
+				info+=1;
+				// key=zid is not right, but it will be updated when updateBibtex is run
+				yield this.DB.queryAsync("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
+			}
+		}
+		if (info > 0)
+			win.alert(info + " item(s) changed or added.");
+	})
+)
+
+defByZotVersion('dbDeleteBib',
+	function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = this.DB.query("SELECT bib FROM keys GROUP BY bib");
+		var params = {
+			inn : {
+				items : dic,
+				type : "bib"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+		var bib;
+		if (params.out) {
+			bib = params.out.item;
+		}
+		res = win.confirm("You are about to delete record of BibTeX database:\n" +
+						  bib +
+						  "\nRecord about associated documents will also be deleted.\n",
+						  "Deleting LyZ database record");
+		if (!res)
+			return;
+		this.DB.query("DELETE FROM docs WHERE bib=?",[bib]);
+		this.DB.query("DELETE FROM keys WHERE bib=?",[bib]);
+	},
+	Zotero.Promise.coroutine(function*() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = yield this.DB.queryAsync("SELECT bib FROM keys GROUP BY bib");
+		var params = {
+			inn : {
+				items : dic,
+				type : "bib"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+		var bib;
+		if (params.out) {
+			bib = params.out.item;
+		}
+		res = win.confirm("You are about to delete record of BibTeX database:\n" +
+						  bib +
+						  "\nRecord about associated documents will also be deleted.\n",
+						  "Deleting LyZ database record");
+		if (!res)
+			return;
+		yield this.DB.queryAsync("DELETE FROM docs WHERE bib=?",[bib]);
+		yield this.DB.queryAsync("DELETE FROM keys WHERE bib=?",[bib]);
+	})
+)
+
+defByZotVersion('dbDeleteDoc',
+	function(doc, bib) {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = this.DB.query("SELECT doc FROM docs");
+		var params = {
+			inn : {
+				items : dic,
+				type : "doc"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+
+		if (params.out) {
+			doc = params.out.item;
+		}
+		res = win.confirm("Do you really want to delete the LyZ database record of the document\n" +
+						  doc + "?");
+		if (!res)
+			return;
+		this.DB.query("DELETE FROM docs WHERE doc=?",[doc]);
+	},
+	Zotero.Promise.coroutine(function*(doc, bib) {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = yield this.DB.queryAsync("SELECT doc FROM docs");
+		var params = {
+			inn : {
+				items : dic,
+				type : "doc"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+
+		if (params.out) {
+			doc = params.out.item;
+		}
+		res = win.confirm("Do you really want to delete the LyZ database record of the document\n" +
+						  doc + "?");
+		if (!res)
+			return;
+		yield this.DB.queryAsync("DELETE FROM docs WHERE doc=?",[doc]);
+	})
+)
+
+defByZotVersion('dbRenameDoc',
+	function() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = this.DB.query("SELECT id,doc FROM docs");
+		var params = {
+			inn : {
+				items : dic,
+				type : "doc"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+		var doc;
+		if (params.out) {
+			doc = params.out.item;
+		}
+		var newfname = this.dialog_FilePickerOpen(win,
+				"Select LyX document for " + doc, "LyX", "*.lyx").path;
+		// have to replace \ with / on windows because lyxserver returns unix style paths
+		newfname = newfname.replace(/\\/g, "/");
+		if (!newfname)
+			return;
+		this.DB.query("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
+	},
+	Zotero.Promise.coroutine(function*() {
+		if (this.lyzDisableCheck()) {
+			return
+		}
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = yield this.DB.queryAsync("SELECT id,doc FROM docs");
+		var params = {
+			inn : {
+				items : dic,
+				type : "doc"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+		var doc;
+		if (params.out) {
+			doc = params.out.item;
+		}
+		var newfname = this.dialog_FilePickerOpen(win,
+				"Select LyX document for " + doc, "LyX", "*.lyx").path;
+		// have to replace \ with / on windows because lyxserver returns unix style paths
+		newfname = newfname.replace(/\\/g, "/");
+		if (!newfname)
+			return;
+		yield this.DB.queryAsync("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
+	})
+)
+
+defByZotVersion('dbRenameBib',
+	function() {
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = this.DB.query("SELECT DISTINCT bib FROM docs");
+		var params = {
+			inn : {
+				items : dic,
+				type : "bib"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+		var bib;
+		if (params.out) {
+			bib = params.out.item;
+		}
+		newfname = this.dialog_FilePickerOpen(win, "Select Bibtex file for " +
+											  bib, "Bibtex", "*.bib").path;
+		if (!newfname)
+			return;
+		this.DB.query("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
+		this.DB.query("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
+	},
+	Zotero.Promise.coroutine(function*() {
+		var win = this.wm.getMostRecentWindow("navigator:browser");
+		var dic = yield this.DB.queryAsync("SELECT DISTINCT bib FROM docs");
+		var params = {
+			inn : {
+				items : dic,
+				type : "bib"
+			},
+			out : null
+		};
+		var res = win.openDialog("chrome://lyz/content/select.xul", "",
+				"chrome, dialog, modal, centerscreen, resizable=yes", params);
+		if (!params.out)
+			return;
+		var bib;
+		if (params.out) {
+			bib = params.out.item;
+		}
+		newfname = this.dialog_FilePickerOpen(win, "Select Bibtex file for " +
+											  bib, "Bibtex", "*.bib").path;
+		if (!newfname)
+			return;
+		yield this.DB.queryAsync("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
+		yield this.DB.queryAsync("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
+	})
+)
+
+defByZotVersion('shutdown',
+				function() {return},
+				Zotero.Promise.coroutine(function*() {
+					yield Zotero.Lyz.DB.closeDatabase(true)
+				}))
 
 var lyz_charmap = {
 	"\u00A0" : "~", // NO-BREAK SPACE
