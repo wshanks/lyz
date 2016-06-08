@@ -114,6 +114,9 @@ Some users have found that the Update BibTeX command stops working unexpectedly.
 ### Using a non-standard lyxpipe
 On Windows the lyxpipe path (`\\.\pipe\lyxpipe`) is a special path and not a real file. You should not try to change this path to something else.
 
+### Compatibility note
+Zotero 5.0 introduced numerous API changes. Versions 3.0.0 and higher of Lyz are compatible with Zotero 5.0 and greater. Versions 2.x and lower only support Zotero version 4 and earlier.
+
 Current state of development
 ----------------------------
 The current maintainer of LyZ is not the original creator and is not intimately familiar with the source code.  He plans to update LyZ as necessary to maintain functionality with the latest releases of LyX and Zotero.  He will also happily accept and merge code patches submitted by other users.  He will try to help with other issues that users experience, but he doesn't make any promises about being able to make things work.
