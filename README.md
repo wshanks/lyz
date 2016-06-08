@@ -1,7 +1,5 @@
 LyZ
 ---
-__WARNING:__ Support for Lyz is currently suspended and its use is not recommended. Changes to the Zotero API in version 5.0 break Lyz's functions and require refactoring and testing. Additionally, changes in recent versions have also broken Lyz (at least on Linux). The maintainer of Lyz would like to update it to continue functioning properly but he has not used Lyz for several years so it is hard to prioritize development time (it is not a quick fix). Any help with getting Lyz working again would be appreciated.
-
 LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant.  The latest stable release is available from [the Mozilla add-ons page](https://addons.mozilla.org/en-US/firefox/addon/lyz/).  The latest source code is available at [GitHub](https://github.com/willsALMANJ/lyz).
 
 Features
@@ -63,7 +61,10 @@ When Zotero reference is changed, BibTeX database as well as the LyX document ca
 Notes on usage
 --------------
 * Always modify your references in Zotero. If you modify the BibTeX database manually or using other software, LyZ will overwrite all the changes when you run “Update BibTeX“.
-Keep your Zotero items unique. LyZ does not make an attempt to identify duplicates, they will be treated as different items and unique BibTeX keys will be created.
+
+* Lyz stores identifiers for all of the references in the BibTeX database as a space separated string in the first line of the BibTeX file. Do not modify this line. When Lyz updates the BibTeX file, it first reads this line to check the current contents of the BibTeX (this behavior is useful if you are passing the BibTeX around between computers and want Lyz to keep up with the changes). If this line is not properly formed, an error will occur and Lyz will not work properly.
+
+* Keep your Zotero items unique. LyZ does not make an attempt to identify duplicates, they will be treated as different items and unique BibTeX keys will be created.
 
 * When working with master/child documents in LyX, you will have to specify the BibTeX database for each child document. This will be the same file as specified for the master document. Unfortunately LyZ has no way of knowing the relationship between documents, so it has to be done manually.
 
