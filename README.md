@@ -1,5 +1,7 @@
 LyZ
 ---
+__WARNING:__ Support for Lyz is currently suspended and its use is not recommended. Changes to the Zotero API in version 5.0 break Lyz's functions and require refactoring and testing. Additionally, changes in recent versions have also broken Lyz (at least on Linux). The maintainer of Lyz would like to update it to continue functioning properly but he has not used Lyz for several years so it is hard to prioritize development time (it is not a quick fix). Any help with getting Lyz working again would be appreciated.
+
 LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant.  The latest stable release is available from [the Mozilla add-ons page](https://addons.mozilla.org/en-US/firefox/addon/lyz/).  The latest source code is available at [GitHub](https://github.com/willsALMANJ/lyz).
 
 Features
