@@ -690,7 +690,8 @@ Zotero.Lyz = {
 // lower or 5.x or higher)
 function defByZotVersion(name, z4func, z5func) {
 	let Zotero_GUID = 'zotero@chnm.gmu.edu'
-	let isStandalone = Services.appinfo.ID == Zotero_GUID 
+	let isStandalone = (Services.appinfo.ID == Zotero_GUID ||
+                        Services.appinfo.ID == 'juris-m@juris-m.github.io')
 
 	function addFunc(version, name, z4func, z5func) {
 		if (version.split('.')[0] < 5) {
