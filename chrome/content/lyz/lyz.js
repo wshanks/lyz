@@ -788,6 +788,7 @@ defByZotVersion('exportToBibtex',
 		}
 
 		var tmp = [];
+        var newCitekeys = []
 		for ( var i = 0; i < items.length; i++) {
 			// TODO: change to libraryKey
 			var id = Zotero.Items.getLibraryKeyHash(items[i]);
@@ -799,17 +800,18 @@ defByZotVersion('exportToBibtex',
 				// Workaround entries that have been deleted and added again to Zotero, which means they will have 
 				// new zotero id and we can't identify them. 
 				try {
-					ct = this.createCiteKey(id, text, bib, items[i].key);
+					ct = this.createCiteKey(id, text, bib, items[i].key, newCitekeys);
+                    newCitekeys.push(ct[0])
 				} catch(e){
 					
-					var res = this.DB.query("SELECT key FROM keys WHERE zid=?",[zids[i]]);
-					win.alert("There is problem with one the entries:\nZotero ID: "+zids[i]+"\nBibTeX Key: "+res[0].key+
+					var res = this.DB.query("SELECT key FROM keys WHERE zid=?",[id]);
+					win.alert("There is problem with one the entries:\nZotero ID: "+id+"\nBibTeX Key: "+res[0].key+
 							"\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
 							"You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
 							"If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
 							"If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
 							);
-					this.DB.query("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					this.DB.query("DELETE FROM keys WHERE zid=?",[id]);
 					itemOK = false;
 				}
 			} else {
@@ -850,6 +852,7 @@ defByZotVersion('exportToBibtex',
 		}
 
 		var tmp = [];
+        var newCitekeys = []
 		for ( var i = 0; i < items.length; i++) {
 			// TODO: change to libraryKey
 			var id = Zotero.Items.getLibraryKeyHash(items[i]);
@@ -861,20 +864,22 @@ defByZotVersion('exportToBibtex',
 			if (this.prefs.getBoolPref("createCiteKey")===true){
 				// Workaround entries that have been deleted and added again to Zotero, which means they will have 
 				// new zotero id and we can't identify them. 
-				try {
-					ct = yield this.createCiteKey(id, text, bib, items[i].key);
+				// try {
+					ct = yield this.createCiteKey(id, text, bib, items[i].key, newCitekeys);
+                    newCitekeys.push(ct[0])
+                    /*
 				} catch(e){
 					
-					var res = yield this.DB.queryAsync("SELECT key FROM keys WHERE zid=?",[zids[i]]);
-					win.alert("There is problem with one the entries:\nZotero ID: "+zids[i]+"\nBibTeX Key: "+res[0].key+
+					var res = yield this.DB.queryAsync("SELECT key FROM keys WHERE zid=?",[id]);
+					win.alert("There is problem with one the entries:\nZotero ID: "+id+"\nBibTeX Key: "+res[0].key+
 							"\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
 							"You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
 							"If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
 							"If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
 							);
-					yield this.DB.queryAsync("DELETE FROM keys WHERE zid=?",[zids[i]]);
+					yield this.DB.queryAsync("DELETE FROM keys WHERE zid=?",[id]);
 					itemOK = false;
-				}
+				}*/
 			} else {
 				var ckre = /.*@[a-z]+\{([^,]+),{1}/;
 				var key = ckre.exec(text)[1];
@@ -888,7 +893,7 @@ defByZotVersion('exportToBibtex',
 )
 
 defByZotVersion('createCiteKey',
-	function(id, text, bib, obj_key) {
+	function(id, text, bib, obj_key, keyBlacklist) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
 		// TODO if item has been deleted from Zotero and added again it will have a new key
@@ -1008,13 +1013,29 @@ defByZotVersion('createCiteKey',
 		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
 		citekey = citekey.replace(re, "");
 		//check if cite key exists
-		var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
-		if (res.length > 0)
-			citekey += (res.length + 1);
+        var testKey = citekey
+        var count = 1
+        while (true) {
+            count = count + 1
+            if (keyBlacklist.indexOf(testKey) != -1) {
+                testKey = citekey + count
+                continue
+            } else {
+                var res = this.DB.query("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,testKey,id]);
+                if (res.length > 0) {
+                    testKey = citekey + count
+                    continue
+                } else {
+                    citekey = testKey
+                    break
+                }
+            }
+        }
+
 		text = text.replace(oldkey, citekey);
 		return [ citekey, text ];
 	},
-	Zotero.Promise.coroutine(function*(id, text, bib, obj_key) {
+	Zotero.Promise.coroutine(function*(id, text, bib, obj_key, keyBlacklist) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var ckre = /.*@[a-z]+\{([^,]+),{1}/;
 		// TODO if item has been deleted from Zotero and added again it will have a new key
@@ -1134,9 +1155,24 @@ defByZotVersion('createCiteKey',
 		re = /[^a-z0-9\!\$\&\*\+\-\.\/\:\;\<\>\?\[\]\^\_\`\|]+/g;
 		citekey = citekey.replace(re, "");
 		//check if cite key exists
-		var res = yield this.DB.queryAsync("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,citekey,id]);
-		if (res.length > 0)
-			citekey += (res.length + 1);
+        var testKey = citekey
+        var count = 1
+        while (true) {
+            count = count + 1
+            if (keyBlacklist.indexOf(testKey) != -1) {
+                testKey = citekey + count
+                continue
+            } else {
+                var res = yield this.DB.queryAsync("SELECT key,zid FROM keys WHERE bib=? AND key=? AND zid<>?",[bib,testKey,id]);
+                if (res.length > 0) {
+                    testKey = citekey + count
+                    continue
+                } else {
+                    citekey = testKey
+                    break
+                }
+            }
+        }
 		text = text.replace(oldkey, citekey);
 		return [ citekey, text ];
 	})
