@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+
+<dialog
+	id="lyz-migration-dialog"
+	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+	orient="vertical"
+	buttons="accept"
+	buttonlabelaccept="Close"
+	ondialogaccept="return true;"
+	flex="1"
+	width="650"
+	height="450">
+        <text value="LyZ: migration complete"
+              style="font-weight: bold; font-size: x-large; font-family: Roman"/>
+        <text value="The following citation keys were changed. This information was also written to the lyz_migration.csv file in the Zotero data directory."
+              style="font-family: Roman"/>
+	<groupbox flex="1">
+        <vbox flex="1" style="overflow:auto; border: 1px dotted black; padding: 2px;">
+        <description id="lyz-migration-description" style="white-space: pre-wrap;"/>
+        </vbox>
+		
+	</groupbox>
+        <script>
+          <![CDATA[
+document.getElementById('lyz-migration-description').textContent = window.arguments[0]
+]]>
+        </script>
+</dialog>

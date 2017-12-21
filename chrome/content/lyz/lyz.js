@@ -1,6 +1,7 @@
 // Credits:
 // - small bits were borrowed from Lytero by Demetrio Girardi, lytero@dementrioatgmail.com
 Components.utils.import("resource://gre/modules/Services.jsm");
+Components.utils.import("resource://gre/modules/osfile.jsm");
 
 Zotero.Lyz = {
 
@@ -33,24 +34,30 @@ Zotero.Lyz = {
 			(this.prefs.getBoolPref('zotero5disable'))) {
 			return
 		}
+		var shutdownObserver = {observe: this.shutdown}
+		Services.obs.addObserver(shutdownObserver, "quit-application", false);
 
-		this.DB = new Zotero.DBConnection("lyz");
 	    var sqlDocs = "CREATE TABLE IF NOT EXISTS docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)";
 	    var sqlKeys = "CREATE TABLE IF NOT EXISTS keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)";
 		if (Zotero.version.split('.')[0] < 5) {
 			// XXX: Legacy 4.0
+                        this.DB = new Zotero.DBConnection("lyz");
 			if (!this.DB.tableExists('docs')) {
 				this.DB.query(sqlDocs);
 				this.DB.query(sqlKeys);
 			}
 		} else {
 			Zotero.Promise.coroutine(function*(context) {
+                                yield Zotero.Schema.schemaUpdatePromise
+                                context.DB = new Zotero.DBConnection("lyz");
 				yield context.DB.queryAsync(sqlDocs);
 				yield context.DB.queryAsync(sqlKeys);
+                                if (context.prefs.getBoolPref('checkZotero5Migration')) {
+                                    context.migrateToZotero5()
+                                }
 			})(this)
 		}
-		var shutdownObserver = {observe: this.shutdown}
-		Services.obs.addObserver(shutdownObserver, "quit-application", false);
+
 	},
 
 	lyzDisableCheck: function() {
@@ -1975,6 +1982,102 @@ defByZotVersion('shutdown',
 				Zotero.Promise.coroutine(function*() {
 					yield Zotero.Lyz.DB.closeDatabase(true)
 				}))
+
+defByZotVersion('migrateToZotero5',
+    function() {},
+    Zotero.Promise.coroutine(function*(context) {
+        yield Zotero.uiReadyPromise
+        if (Zotero.Libraries.userLibraryID === 0) {
+            this.prefs.setBoolPref('checkZotero5Migration', false)
+            return
+        }
+        res = yield this.DB.queryAsync("SELECT key FROM keys WHERE zid GLOB '0_*'")
+        if (res.length === 0) {
+            this.prefs.setBoolPref('checkZotero5Migration', false)
+            return
+        }
+
+        var prompts = Components.
+            classes['@mozilla.org/embedcomp/prompt-service;1'].
+            getService(Components.interfaces.nsIPromptService)
+
+        var doNotShow = { value: false }
+        var pressedOK = prompts.confirmCheck(
+            null,
+            'LyZ: legacy database detected',
+            'LyZ has detected Zotero 4.0 entries in its database. These entries will prevent LyZ ' +
+                'from creating a .bib file. Do you want LyZ to try to update the ' +
+                'entries to match Zotero 5 items? Consider backing up your Zotero data directory ' +
+                'before doing so. It can be accessed from the "Files and Folders" in the ' +
+                'Advanced section of Zotero\'s preferences. Some cite keys may change during ' +
+                'this process.',
+            'Do not show this prompt in the future',
+            doNotShow)
+        var win = this.wm.getMostRecentWindow("navigator:browser");
+        if (!pressedOK) {
+            if (doNotShow.value === true) {
+                win.alert('To show this dialog again in the future, reset ' +
+                          'extensions.lyz.checkZotero5Migration in the config editor available ' +
+                          'in Zotero\'s Advanced preferences section.')
+                this.prefs.setBoolPref('checkZotero5Migration', false)
+            }
+            return
+        } else {
+            win.alert('LyZ database migration will begin now. Do not exit Zotero until Lyz ' +
+                      'indicates that the migration is complete.')
+        }
+
+        var results = yield this.DB.queryAsync("SELECT key,bib,zid FROM keys WHERE zid GLOB '0_*'")
+        var newZid, conflicts, finalKey, tmpDroppedKeys
+        var droppedKeys = []
+        for (let idx = 0; idx < results.length; idx++) {
+            newZid = String(Zotero.Libraries.userLibraryID) + results[idx].zid.slice(1)
+            finalKey = results[idx].key
+            conflicts = yield this.DB.queryAsync("SELECT key FROM keys WHERE zid=? AND bib=?",
+                                                 [newZid, results[idx].bib])
+            if (conflicts.length > 0) {
+                tmpDroppedKeys = []
+                for (let jdx = 0; jdx < conflicts.length; jdx++) {
+                    if (finalKey > conflicts[jdx].key) {
+                        tmpDroppedKeys.push(finalKey)
+                        finalKey = conflicts[jdx].key
+                    } else {
+                        tmpDroppedKeys.push(conflicts[jdx].key)
+                    }
+                }
+                yield this.DB.queryAsync("DELETE FROM keys WHERE zid=? AND bib=?",
+                                         [newZid, results[idx].bib])
+                for (let jdx = 0; jdx < tmpDroppedKeys.length; jdx++) {
+                    droppedKeys.push([results[idx].bib, tmpDroppedKeys[jdx], finalKey])
+                }
+            }
+            yield this.DB.queryAsync("UPDATE keys SET zid=?, key=? WHERE zid=? AND key=? AND bib=?",
+                                     [newZid, finalKey, results[idx].zid, results[idx].key,
+                                      results[idx].bib])
+        }
+
+        this.prefs.setBoolPref('checkZotero5Migration', false)
+        if (droppedKeys.length > 0) {
+            var report = 'Document,Old key,New key\r\n' + droppedKeys.join('\r\n')
+
+            var reportPath = OS.Path.join(Zotero.DataDirectory.dir, 'lyz_migration.csv')
+            var fbibtex_stream, cstream
+            [ fbibtex_stream, cstream ] = this.fileWrite(reportPath)
+            cstream.writeString(report)
+            cstream.close()
+            fbibtex_stream.close()
+
+            win = this.wm.getMostRecentWindow("navigator:browser")
+            win.openDialog('chrome://lyz/content/migration5.xul', 'lyz-migration-window',
+                           'chrome, centerscreen',
+                           report)
+        } else {
+            win = this.wm.getMostRecentWindow("navigator:browser")
+            win.alert('Lyz migration complete. No citation keys were changed.')
+        }
+    }))
+
+
 
 var lyz_charmap = {
 	"\u00A0" : "~", // NO-BREAK SPACE

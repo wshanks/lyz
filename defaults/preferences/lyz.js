@@ -7,3 +7,4 @@ pref("extensions.lyz.use_utf8", false);
 pref("extensions.lyz.useJournalAbbreviation",false);
 pref("extensions.lyz.os", "");
 pref("extensions.lyz.zotero5disable", false);
+pref("extensions.lyz.checkZotero5Migration", true);
