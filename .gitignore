@@ -1,4 +1,5 @@
 *.sw?
+*~
 .DS_Store
 lyz.xpi
 Extra/AMO_README.txt
