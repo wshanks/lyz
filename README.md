@@ -1,6 +1,6 @@
 LyZ
 ---
-LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant.  The latest stable release is available from [the Mozilla add-ons page](https://addons.mozilla.org/en-US/firefox/addon/lyz/).  The latest source code is available at [GitHub](https://github.com/willsALMANJ/lyz).
+LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant. The latest source code is available at [GitHub](https://github.com/willsALMANJ/lyz). The latest stable release is available from [the GitHub releases page](https://github.com/willsALMANJ/lyz/releases).
 
 Features
 --------
@@ -17,10 +17,11 @@ Features
 
 Installation and Settings
 -------------------------
-1. Install LyZ  from Firefox Addons and restart Firefox.
-2. Open LyX and set LyXServer path (in LyX go to menu, Tools > Preferences... > Paths and set LyXServer pipe to): Windows users can use the default path setting in LyZ, i.e. `\\.\pipe\lyxpipe`. Linux and Mac users can use e.g. `~/.lyxpipe` and change the LyZ settings accordingly.
-3. By default all characters are escaped, e.g. š becomes \v{s}. Set `extensions.lyz.use_utf8` to true in `about:config` to avoid escaping (in case you need to use non-latin scripts such as Chinese).
-4. Open document in LyX.
+1. Download the lyz `.xpi` file from the [GitHub releases page](https://github.com/willsALMANJ/lyz/releases).
+2. Install LyZ in Zotero by selecting Add-ons from the Tools menu and then clicking the gear icon in the Add-ons window, selecting "Install add-on from file" and selecting the lyz `.xpi` file.
+3. Open LyX and set LyXServer path (in LyX go to menu, Tools > Preferences... > Paths and set LyXServer pipe to): Windows users can use the default path setting in LyZ, i.e. `\\.\pipe\lyxpipe`. Linux and Mac users can use e.g. `~/.lyxpipe` and change the LyZ settings accordingly.
+4. By default all characters are escaped, e.g. š becomes \v{s}. Set `extensions.lyz.use_utf8` to true in `about:config` to avoid escaping (in case you need to use non-latin scripts such as Chinese).
+5. Open document in LyX.
 
 Adding and inserting citations
 ------------------------------
@@ -102,7 +103,7 @@ Please follow these tips to find out the source of your problem:
 
 * All functions Lyz has are patched together using these commands. The most trouble some seems to be the server-get-filename.
 
-* Extract useful information from Firefox’s Error Console and from commandline where you ran `lyx.exe -dbg lyxserver`.
+* Extract useful information from Zotero’s Error Console (by starting Zotero on the command line with the `--jsconsole` option) and from commandline where you ran `lyx.exe -dbg lyxserver`.
 
 * Peruse the Issues opened by other users at [https://github.com/willsALMANJ/lyz](https://github.com/willsALMANJ/lyz).  Be sure to check the closed issues as well to see if a solution has already been found for your problem.  If not, open a new issue.
 
