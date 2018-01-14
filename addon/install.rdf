@@ -4,7 +4,7 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>lyz@zotero.org</em:id>
-    <em:version>4.0.0</em:version>
+    <em:version>4.0.1a1</em:version>
 	<em:multiprocessCompatible>true</em:multiprocessCompatible>
         <em:updateURL>https://raw.githubusercontent.com/willsALMANJ/lyz/release/deploy/update.rdf</em:updateURL>
     <em:type>2</em:type>
