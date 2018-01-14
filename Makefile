@@ -9,7 +9,7 @@ xpi: $(BLDDIR)/lyz.xpi
 
 $(BLDDIR)/lyz.xpi:
 	@mkdir -p $(dir $@)
-	cd addon; zip -FSr $(ABS_BLDDIR)/lyz.xpi * -x \*.swp
+	cd addon; zip -FSr $(ABS_BLDDIR)/lyz.xpi * -x \*.swp -x '#*#' -x \*~
 
 clean:
 	rm -f $(BLDDIR)/lyz.xpi
