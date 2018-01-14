@@ -4,8 +4,9 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>lyz@zotero.org</em:id>
-    <em:version>3.0.3alpha1</em:version>
+    <em:version>4.0.0a1</em:version>
 	<em:multiprocessCompatible>true</em:multiprocessCompatible>
+        <em:updateURL>https://raw.githubusercontent.com/willsALMANJ/lyz/release/deploy/update.rdf</em:updateURL>
     <em:type>2</em:type>
     <em:unpack>true</em:unpack>
     <!-- Target Application this extension can install into, 
@@ -34,6 +35,6 @@
   <em:name>LyZ</em:name>
   <em:description>LyX integration plugin.</em:description>
   <em:creator>Petr Šimon</em:creator>
-  <em:homepageURL>https://addons.mozilla.org/en-US/firefox/addon/lyz/</em:homepageURL>
+  <em:homepageURL>https://github.com/willsALMANJ/lyz</em:homepageURL>
   </Description>      
 </RDF>

@@ -15,6 +15,10 @@ Features
 * Persistent association of LyX documents and BibTeX databases.
 * Support for group cooperation.
 
+**NOTE:** As of version 4.0, LyZ is distributed from the [GitHub releases page](https://github.com/willsALMANJ/lyz/releases).
+New updates will not be published to the location checked by previous versions of LyZ (the Mozilla Add-ons page).
+To receive new LyZ updates, please update to the latest version of LyZ.
+
 Installation and Settings
 -------------------------
 1. Download the lyz `.xpi` file from the [GitHub releases page](https://github.com/willsALMANJ/lyz/releases).

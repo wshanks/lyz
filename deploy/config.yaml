@@ -1,0 +1,19 @@
+github:
+    user: willsalmanj
+    repo: lyz 
+    token: deploy/github.token
+    assets:
+    - path: build/lyz.xpi
+      type: application/x-xpinstall
+
+git_release:
+    remote: origin
+    branch: release
+
+version_strings:
+- path: addon/install.rdf
+  pattern: (<em:version>)(?P<release>.*)(</em:version>)
+- path: deploy/update.rdf
+  pattern: (<em:version>)(?P<release>.*)(</em:version>)
+- path: deploy/update.rdf
+  pattern: (<em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v)(?P<release>.*)(/lyz.xpi</em:updateLink>)
