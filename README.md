@@ -126,6 +126,12 @@ Current state of development
 ----------------------------
 The current maintainer of LyZ is not the original creator and is not intimately familiar with the source code.  He plans to update LyZ as necessary to maintain functionality with the latest releases of LyX and Zotero.  He will also happily accept and merge code patches submitted by other users.  He will try to help with other issues that users experience, but he doesn't make any promises about being able to make things work.
 
+How to Contribute
+-----------------
+1. Star the repository on GitHub. The number of stars on GitHub is one of the most visible metrics for gauging the level of interest in project.
+2. Encourage others to use the project, either directly or by writing a blog post. Besides GitHub stars, the other metric for gauging interest in the project is the total number of downloads of the xpi.
+
 Credits
 -------
 Lyz was written by  Petr Šimon.  It is inspired by Lytero, which Petr wanted to improve, but he ended up starting from scratch. Hence the new name. Thanks to Dan Stillman and mronkko at zotero.org forum. Justin Wood for BOM and escaping suggestions and donation!  It is currently maintained on GitHub by willsALMANJ.
+3. Submit new features or translations. However, keep in mind that new features add to the maintenance burden of the project. So get in contact before putting a lot of time into a new feature.
