@@ -916,12 +916,18 @@ defByZotVersion('createCiteKey',
 			return [ citekey, text ];
 		}
 		
-		else if (this.prefs.getCharPref("citekey") == "zoteroShort"){
+		else if (this.prefs.getCharPref("citekey") == "zoteroShort") {
 		    citekey = obj_key;
-		    text = text.replace(oldkey,citekey);
-		    return [citekey,text];
+		    text = text.replace(oldkey, citekey);
+		    return [ citekey, text ];
 		}
-
+		
+		else if (this.prefs.getCharPref("citekey") == "zoteroExport") {
+			// Use the key that zotero will export to bibtex file.
+			// NOTE: No test against duplication.
+			return [ oldkey, text ];
+		}
+		
 		var creators;
 		var authors;
 		var author;
@@ -1058,10 +1064,16 @@ defByZotVersion('createCiteKey',
 			return [ citekey, text ];
 		}
 		
-		else if (this.prefs.getCharPref("citekey") == "zoteroShort"){
+		else if (this.prefs.getCharPref("citekey") == "zoteroShort") {
 		    citekey = obj_key;
-		    text = text.replace(oldkey,citekey);
-		    return [citekey,text];
+		    text = text.replace(oldkey, citekey);
+		    return [ citekey, text ];
+		}
+		
+		else if (this.prefs.getCharPref("citekey") == "zoteroExport") {
+			// Use the key that zotero will export to bibtex file.
+			// NOTE: No test against duplication.
+			return [ oldkey, text ];
 		}
 
 		var creators;
