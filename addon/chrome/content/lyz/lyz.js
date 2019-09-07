@@ -139,7 +139,7 @@ Zotero.Lyz = {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 
 		pipeout = Components.classes["@mozilla.org/file/local;1"]
-				.createInstance(Components.interfaces.nsILocalFile);
+				.createInstance(Components.interfaces.nsIFile);
 		path = this.prefs.getCharPref("lyxserver");
 		pipeout.initWithPath(path + ".out");
 		if (!pipeout.exists()) {
@@ -168,7 +168,7 @@ Zotero.Lyz = {
 
 		try {
 			pipein = Components.classes["@mozilla.org/file/local;1"]
-					.createInstance(Components.interfaces.nsILocalFile);
+					.createInstance(Components.interfaces.nsIFile);
 			pipein.initWithPath(this.prefs.getCharPref("lyxserver") + ".in");
 		} catch (e) {
 			win.alert("Wrong path to Lyx server:\n" +
@@ -200,7 +200,7 @@ Zotero.Lyz = {
 
 		// ----- open again
 		var pipeout = Components.classes["@mozilla.org/file/local;1"]
-				.createInstance(Components.interfaces.nsILocalFile);
+				.createInstance(Components.interfaces.nsIFile);
 		var path = this.prefs.getCharPref("lyxserver");
 		pipeout.initWithPath(path + ".out");
 		if (!pipeout.exists()) {
@@ -242,7 +242,7 @@ Zotero.Lyz = {
 		
 		try {
 			pipein = Components.classes["@mozilla.org/file/local;1"]
-			.createInstance(Components.interfaces.nsILocalFile);
+			.createInstance(Components.interfaces.nsIFile);
 			pipein.initWithPath(this.prefs.getCharPref("lyxserver")+".in");
 		} catch(e){
 			win.alert("Wrong path to Lyx server:\n"+this.prefs.getCharPref("lyxserver")+"\n"+e);
@@ -351,7 +351,7 @@ Zotero.Lyz = {
 		//this.lyxPipeWrite("buffer-write");
 		//this.lyxPipeWrite("buffer-close");	    
 		lyxfile = Components.classes["@mozilla.org/file/local;1"]
-				.createInstance(Components.interfaces.nsILocalFile);
+				.createInstance(Components.interfaces.nsIFile);
 		// LyX returns linux style paths, which don't work on Windows
 		oldpath = doc;
 		try {
@@ -367,7 +367,7 @@ Zotero.Lyz = {
 		//remove old backup file
 		try {
 			tmpfile = Components.classes["@mozilla.org/file/local;1"]
-					.createInstance(Components.interfaces.nsILocalFile);
+					.createInstance(Components.interfaces.nsIFile);
 			tmpfile.initWithPath(doc + ".lyz~");
 			if (tmpfile.exists()) {
 				tmpfile.remove(1);
@@ -406,7 +406,7 @@ Zotero.Lyz = {
 		} catch (e) {
 			win.alert("Please report the following error:\n" + e);
 			var oldfile = Components.classes["@mozilla.org/file/local;1"]
-					.createInstance(Components.interfaces.nsILocalFile);
+					.createInstance(Components.interfaces.nsIFile);
 			oldfile.initWithPath(doc);
 			if (oldfile.exists()) {
 				oldfile.remove(1);
@@ -516,7 +516,7 @@ Zotero.Lyz = {
 			if (fp.file.path.split(".").length < 2) {
 				// this is weird, but I don't know how to set new path
 				var file = Components.classes["@mozilla.org/file/local;1"]
-						.createInstance(Components.interfaces.nsILocalFile);
+						.createInstance(Components.interfaces.nsIFile);
 				file.initWithPath(fp.file.path + ".bib");
 				file.create(file.NORMAL_FILE_TYPE, 0666);
 				return file;
@@ -534,7 +534,7 @@ Zotero.Lyz = {
 
 	fileReadByLine : function(path) {
 		var file = Components.classes["@mozilla.org/file/local;1"]
-				.createInstance(Components.interfaces.nsILocalFile);
+				.createInstance(Components.interfaces.nsIFile);
 		file.initWithPath(path);
 		if (!file.exists()) {
 			win.alert("File " + path + " does not exist.");
@@ -552,11 +552,11 @@ Zotero.Lyz = {
 
 	fileBackup : function(path) {
 		var oldfile = Components.classes["@mozilla.org/file/local;1"]
-				.createInstance(Components.interfaces.nsILocalFile);
+				.createInstance(Components.interfaces.nsIFile);
 		oldfile.initWithPath(path);
 
 		var file = Components.classes["@mozilla.org/file/local;1"]
-				.createInstance(Components.interfaces.nsILocalFile);
+				.createInstance(Components.interfaces.nsIFile);
 		file.initWithPath(path + ".lyz~");
 		if (file.exists()) {
 			file.remove(1);
@@ -569,7 +569,7 @@ Zotero.Lyz = {
 	fileWrite : function(path) {
 		var win = this.wm.getMostRecentWindow("navigator:browser");
 		var file = Components.classes["@mozilla.org/file/local;1"]
-				.createInstance(Components.interfaces.nsILocalFile);
+				.createInstance(Components.interfaces.nsIFile);
 		file.initWithPath(path);
 		var file_stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
 				.createInstance(Components.interfaces.nsIFileOutputStream);
