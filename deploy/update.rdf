@@ -9,10 +9,41 @@
                         <em:version>4.0.1a1</em:version>
                         <em:targetApplication>
                             <rdf:Description>
+                                <em:id>zotero@chnm.gmu.edu</em:id>
+                                <em:minVersion>5.0.24</em:minVersion>
+                                <em:maxVersion>*</em:maxVersion>
+                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1a1/lyz.xpi</em:updateLink>
+                            </rdf:Description>
+                        </em:targetApplication> 
+
+                        <em:targetApplication>
+                            <rdf:Description>
+                                <em:id>juris-m@juris-m.github.io</em:id>
+                                <em:minVersion>5.0.24</em:minVersion>
+                                <em:maxVersion>*</em:maxVersion>
+                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1a1/lyz.xpi</em:updateLink>
+                            </rdf:Description>
+                        </em:targetApplication>
+
+                    </rdf:Description>
+                </rdf:li>
+
+                <rdf:li>
+                    <rdf:Description>
+                        <!-- Pin version 4.0.1 for older version of Zotero -->
+                        <!-- Note that the eversion and updateLink tags must
+                             have the line breaks before the closing tags to 
+                             avoid getting matched by the regexes in
+                             deploy/config.yaml -->
+                        <em:version>4.0.1
+                            </em:version>
+                        <em:targetApplication>
+                            <rdf:Description>
                                 <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
                                 <em:minVersion>34.0</em:minVersion>
                                 <em:maxVersion>56.*</em:maxVersion>
-                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1a1/lyz.xpi</em:updateLink>
+                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1/lyz.xpi
+                                    </em:updateLink>
                             </rdf:Description>
                         </em:targetApplication>
 
@@ -21,7 +52,8 @@
                                 <em:id>zotero@chnm.gmu.edu</em:id>
                                 <em:minVersion>3.0b1</em:minVersion>
                                 <em:maxVersion>5.0.74</em:maxVersion>
-                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1a1/lyz.xpi</em:updateLink>
+                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1/lyz.xpi
+                                    </em:updateLink>
                             </rdf:Description>
                         </em:targetApplication> 
 
@@ -30,12 +62,14 @@
                                 <em:id>juris-m@juris-m.github.io</em:id>
                                 <em:minVersion>4.0</em:minVersion>
                                 <em:maxVersion>5.0.74</em:maxVersion>
-                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1a1/lyz.xpi</em:updateLink>
+                                <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1/lyz.xpi
+                                    </em:updateLink>
                             </rdf:Description>
                         </em:targetApplication>
 
                     </rdf:Description>
                 </rdf:li>
+
             </rdf:Seq>
         </em:updates>
     </rdf:Description>
