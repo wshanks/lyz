@@ -20,7 +20,7 @@
                             <rdf:Description>
 				<em:id>zotero@chnm.gmu.edu</em:id>
 				<em:minVersion>3.0b1</em:minVersion>
-				<em:maxVersion>*</em:maxVersion>
+				<em:maxVersion>5.0.74</em:maxVersion>
                                 <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1a1/lyz.xpi</em:updateLink>
                             </rdf:Description>
                         </em:targetApplication> 
@@ -29,7 +29,7 @@
                             <rdf:Description>
                                 <em:id>juris-m@juris-m.github.io</em:id>
                                 <em:minVersion>4.0</em:minVersion>
-                                <em:maxVersion>*</em:maxVersion>
+                                <em:maxVersion>5.0.74</em:maxVersion>
                                 <em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v4.0.1a1/lyz.xpi</em:updateLink>
                             </rdf:Description>
                         </em:targetApplication>

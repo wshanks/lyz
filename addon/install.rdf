@@ -22,14 +22,14 @@
       <Description>
 	<em:id>zotero@chnm.gmu.edu</em:id>
 	<em:minVersion>3.0b1</em:minVersion>
-	<em:maxVersion>*</em:maxVersion>
+	<em:maxVersion>5.0.74</em:maxVersion>
       </Description>
     </em:targetApplication>
     <em:targetApplication>
       <Description>
 	<em:id>juris-m@juris-m.github.io</em:id>
 	<em:minVersion>3.0b1</em:minVersion>
-	<em:maxVersion>*</em:maxVersion>
+	<em:maxVersion>5.0.74</em:maxVersion>
       </Description>
     </em:targetApplication>
   <em:name>LyZ</em:name>
