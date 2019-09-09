@@ -69,28 +69,6 @@ Zotero.Lyz = {
         return fname[1];
     },
 
-    lyxGetOpenDocs : function() {
-        var docs = [];
-        var original = this.lyxGetDoc();
-        docs.push(original);
-        var name;
-        var go = true;
-        do {
-            if (this.os=="Win"){
-                res = this.lyxAskServer("buffer-next");
-            } else {
-                res = this._lyxAskServer("buffer-next");
-            }
-            name = this.lyxGetDoc();
-            if (original == name) {
-                go = false;//not necessary
-                return docs;
-            }
-            docs.push(name);
-        } while (go);
-        return null;
-    },
-
     lyxGetPos : function() {
         if (this.os=="Win"){
             res = this.lyxAskServer("server-get-xy");
@@ -315,8 +293,6 @@ Zotero.Lyz = {
     syncBibtexKeyFormat : function(doc, oldkeys, newkeys) {
         var cstream, outstream, re, lyxfile, oldpath, tmpfile;
         var win = this.wm.getMostRecentWindow("navigator:browser");
-        //this.lyxPipeWrite("buffer-write");
-        //this.lyxPipeWrite("buffer-close");        
         lyxfile = Components.classes["@mozilla.org/file/local;1"]
                 .createInstance(Components.interfaces.nsIFile);
         // LyX returns linux style paths, which don't work on Windows
@@ -382,7 +358,6 @@ Zotero.Lyz = {
             tmpfile.copyTo(null, lyxfile.leafName);
 
         }
-        //this.lyxPipeWrite("file-open:"+oldpath);  
     },
 
     writeBib : function(bib, entries_text, zids) {
@@ -426,30 +401,6 @@ Zotero.Lyz = {
 
     getZoteroItem : function(key) {
         var win = this.wm.getMostRecentWindow("navigator:browser");
-//      keyhash = Zotero.Items.parseLibraryKeyHash(key);
-//      var sql = "SELECT ROWID FROM " + this._ZDO_table + " WHERE ";
-//      var params = [];
-//      if (this._ZDO_idOnly) {
-//          sql += "ROWID=?";
-//          params.push(key);
-//      }
-//      else {
-//          sql += "libraryID";
-//          if (libraryID) {
-//              sql += "=? ";
-//              params.push(libraryID);
-//          }
-//          else {
-//              sql += " IS NULL ";
-//          }
-//          sql += "AND key=?";
-//          params.push(key);
-//      }
-//      var id = Zotero.DB.valueQuery(sql, params);
-//      if (!id) {
-//          return false;
-//      }
-//      return Zotero[this._ZDO_Objects].get(id);
         
         var keyhash = Zotero.Items.parseLibraryKeyHash(key);
         return Zotero.Items.getByLibraryAndKey(keyhash.libraryID, keyhash.key);
@@ -550,85 +501,7 @@ Zotero.Lyz = {
         return [ file_stream, cstream ];
     },
 
-    // This function appears to be unused
-    // loadTranslators : function() {
-    //  _cache = [];
-    //  _translators = {};
-    //  
-    //  var i = 0;
-    //  var filesInCache = {};
-    //  var contents = Zotero.getTranslatorsDirectory().directoryEntries;
-    //  while (contents.hasMoreElements()) {
-    //      var file = contents.getNext().QueryInterface(
-    //              Components.interfaces.nsIFile);
-    //      var leafName = file.leafName;
-    //      if (!leafName || leafName[0] == ".")
-    //          continue;
-    //      var lastModifiedTime = file.lastModifiedTime;
-    //
-    //      var dbCacheEntry = false;
-    //      if (dbCache[leafName]) {
-    //          filesInCache[leafName] = true;
-    //          if (dbCache[leafName].lastModifiedTime == lastModifiedTime) {
-    //              dbCacheEntry = dbCache[file.leafName];
-    //          }
-    //      }
-    //
-    //      if (dbCacheEntry) {
-    //          // get JSON from cache if possible
-    //          var translator = new Zotero.Translator(file,
-    //                  dbCacheEntry.translatorJSON, dbCacheEntry.code);
-    //          filesInCache[leafName] = true;
-    //      } else {
-    //          // otherwise, load from file
-    //          var translator = new Zotero.Translator(file);
-    //      }
-    //
-    //      if (translator.translatorID) {
-    //          if (_translators[translator.translatorID]) {
-    //              // same translator is already cached
-    //              translator
-    //                      .logError('Translator with ID '
-    //                              + translator.translatorID
-    //                              + ' already loaded from "'
-    //                              + _translators[translator.translatorID].file.leafName
-    //                              + '"');
-    //          } else {
-    //              // add to cache
-    //              _translators[translator.translatorID] = translator;
-    //              for ( var type in TRANSLATOR_TYPES) {
-    //                  if (translator.translatorType & TRANSLATOR_TYPES[type]) {
-    //                      _cache[type].push(translator);
-    //                  }
-    //              }
-    //
-    //              if (!dbCacheEntry) {
-    //                  // Add cache misses to DB
-    //                  if (!transactionStarted) {
-    //                      transactionStarted = true;
-    //                      Zotero.DB.beginTransaction();
-    //                  }
-    //                  Zotero.Translators.cacheInDB(leafName,
-    //                          translator.metadataString,
-    //                          translator.cacheCode ? translator.code : null,
-    //                          lastModifiedTime);
-    //                  delete translator.metadataString;
-    //              }
-    //          }
-    //      }
-    //
-    //      i++;
-    //  }
-    // },
-
-    kile : function() {
-        // based on file - allow loading
-        // keep in keys
-        // insert-citation
-        // when kile: disable all LyX functions
-    },
-
-    test : function() {
+    test: function() {
         if (this.lyzDisableCheck()) {
             return
         }
@@ -638,7 +511,6 @@ Zotero.Lyz = {
             win.alert("Error: " + t);
             return;
         }
-        //  this.lyxAskServer(t);
         try {
             if (this.os == "Win"){
                 t = this.lyxAskServer(t);
@@ -651,12 +523,6 @@ Zotero.Lyz = {
                       "\nTry again.");
         }
         win.alert("DONE");
-    },
-
-    pause : function(milliseconds) {
-        var dt = new Date();
-        while ((new Date()) - dt <= milliseconds) { /* Do nothing */
-        }
     },
 
     checkDocInDB: Zotero.Promise.coroutine(function*() {
@@ -684,11 +550,7 @@ Zotero.Lyz = {
         var text;
 
         var callback = function(obj, worked) {
-            // FIXME: the Zotero API has changed from obj.output
-            text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
-            if (!text) {// this is for Zotero 2.0.9
-                text = obj.output.replace(/\r\n/g, "\n");
-            }
+            text = obj.string;
         };
 
         var translation = new Zotero.Translate.Export;
@@ -718,22 +580,8 @@ Zotero.Lyz = {
             if (this.prefs.getBoolPref("createCiteKey")===true){
                 // Workaround entries that have been deleted and added again to Zotero, which means they will have 
                 // new zotero id and we can't identify them. 
-                // try {
                     ct = yield this.createCiteKey(id, text, bib, items[i].key, newCitekeys);
                     newCitekeys.push(ct[0])
-                    /*
-                } catch(e){
-                    
-                    var res = yield this.DB.queryAsync("SELECT key FROM keys WHERE zid=?",[id]);
-                    win.alert("There is problem with one the entries:\nZotero ID: "+id+"\nBibTeX Key: "+res[0].key+
-                            "\nThis item will be deleted from Lyz database because it has been removed from Zotero.\n"+
-                            "You might have had duplicate items or you added same item after you have deleted from Zotero.\n\n"+
-                            "If you are able to identify the item by the BibTeX key, please cite it again after the Update has finished.\n"+
-                            "If you are unable to identify the item by the BibTeX key, you have to identify it in LyX document and cite it again."
-                            );
-                    yield this.DB.queryAsync("DELETE FROM keys WHERE zid=?",[id]);
-                    itemOK = false;
-                }*/
             } else {
                 var ckre = /.*@[a-z]+\{([^,]+),{1}/;
                 var key = ckre.exec(text)[1];
@@ -749,7 +597,7 @@ Zotero.Lyz = {
         var win = this.wm.getMostRecentWindow("navigator:browser");
         var ckre = /.*@[a-z]+\{([^,]+),{1}/;
         // TODO if item has been deleted from Zotero and added again it will have a new key
-        // basically now way to know.
+        // basically no way to know.
         var oldkey = ckre.exec(text)[1];
         var dic = [];
         // current format is 0_XXXXXXX where 0 is "library id", not sure what that is for
@@ -843,11 +691,10 @@ Zotero.Lyz = {
         }
         dic.title = title;
         // YEAR
-        ckre = /[\s,]+(year|date)\s*=\s*\{\D*(\d+)[^\}]*\},?/; //.*year\s?=\s?\{(.*)\},?/;
+        ckre = /[\s,]+(year|date)\s*=\s*\{\D*(\d+)[^\}]*\},?/;
         try {
             year = ckre.exec(text)[2].replace(" ", "");
         } catch (e) {
-            //win.alert("All entries should to be dated. Please add a date to:\n"+text);
             year = "";
         }
         dic.year = year;
@@ -894,38 +741,6 @@ Zotero.Lyz = {
         // export citation to Bibtex
         var win = this.wm.getMostRecentWindow("navigator:browser");
         var zitems = win.ZoteroPane.getSelectedItems();
-//      ///////
-//      //var key = zitems[0].key;
-//      win.alert(zitems[0].key);
-//      var key = "0_MQP2MZSJ";
-//      var item = this.getZoteroItem(key);
-//      win.alert(item.firstCreator);
-//      var items = new Array();
-//      items.push(item);
-//      
-//      var text;
-//
-//      var callback = function(obj, worked) {
-//          // FIXME: the Zotero API has changed from obj.output
-//          text = obj.string;//.replace(/\r\n/g, "\n");// this is for Zotero 2.1
-//          alert("TEST\n"+worked+text);
-//          if (!text) {// this is for Zotero 2.0.9
-//              text = obj.output.replace(/\r\n/g, "\n");
-//          }
-//      };
-//
-//      var translation = new Zotero.Translate.Export;
-//      translation.noWait = true;
-//      var translatorID = this.prefs.getCharPref("selectedTranslator");
-//      translation.setTranslator(translatorID);
-//      translation.setHandler("done", callback);
-//      
-//
-//      translation.setItems([item]);
-//      translation.translate();
-//      win.alert("UPDATE\n"+text);
-//      a
-//      ///////
         // FIXME: this should be called bellow, but it returns empty there (???)
         if (!zitems.length) {
             win.alert("Please select at least one citation.");
@@ -946,12 +761,6 @@ Zotero.Lyz = {
             t += "Press Cancel to select from your existing databases\n";
 
             // FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
-            // var check = { value: true };
-            // var ifps = Components.interfaces.nsIPromptService;
-            // var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService();
-            // promptService = promptService.QueryInterface(ifps);
-            // var res = confirm(t,"BibTex databse selection",
-            //            ifps.STD_YES_NO_BUTTONS,null,null,null,"",check);
             res = win.confirm(t, "BibTex database selection");
             if (res) {
                 bib_file = this.dialog_FilePickerSave(win,
@@ -1086,9 +895,6 @@ Zotero.Lyz = {
                              "or when the BibTex key format has been changed.");
             if (!res)
                 return;
-            // FIXME test again updating of all document associated with current bib
-            // var tmp = this.DB.query("SELECT doc FROM docs where bib=\""+bib+"\"");       
-            // if (tmp.length==1){
             
             if (this.os == "Win"){
                 this.lyxAskServer("buffer-write");
@@ -1105,26 +911,7 @@ Zotero.Lyz = {
                 this._lyxAskServer("file-open:" + doc);
             }
             
-            // } else {
-            //  var docs = new Array();
-            //  var open_docs = this.lyxGetOpenDocs();
-            //     this.pause(100);
-            //  this.lyxPipeWrite("buffer-write-all");
-            //  for (var i=0;i<open_docs.length;i++){
-            //         this.pause(100);
-            //      this.lyxPipeWrite("buffer-close");
-            //  }
-            //  for (var k=0;k<tmp.length;k++){
-            //      var d = tmp[k]['doc'];
-            //      this.syncBibtexKeyFormat(d,oldkeys,newkeys);
-            //  }
-
-            //  for (var j=0;j<open_docs.length;j++){
-            //         this.pause(100);
-            //      this.lyxPipeWrite("file-open:"+open_docs[j]);
-            //  }
-            // }   
-        }//end of if (p)
+        }
     }),
 
     updateFromBibtexFile: Zotero.Promise.coroutine(function*() {
@@ -1148,10 +935,6 @@ Zotero.Lyz = {
             res = yield this.DB.queryAsync("SELECT * FROM keys WHERE zid=? AND bib=?",[zid,bib]);
 
             if (res.length === 0) {
-                /*info += zid + ": "
-                        + this.exportToBibliography(this.getZoteroItem(zid))
-                        + "\n";
-                        */
                 info+=1;
                 // key=zid is not right, but it will be updated when updateBibtex is run
                 yield this.DB.queryAsync("INSERT INTO keys VALUES(null,?,?,?)",[zid,bib,zid]);
