@@ -11,21 +11,17 @@ Zotero.Lyz = {
     wm : null,
     os: null,
 
-    init : function() {
+    init: async function() {
+        await Zotero.Schema.schemaUpdatePromise
+
         //set up preferences
-        this.prefs = Components.classes["@mozilla.org/preferences-service;1"]
-                .getService(Components.interfaces.nsIPrefService);
-        this.prefs = this.prefs.getBranch("extensions.lyz.");
-        this.os = this.prefs.getCharPref("os");
-        
-        if (this.os === ""){
-            if (navigator.platform.indexOf("Win")===0){
-                this.os = "Win";
-            } else {// assuming this works also for MacOS better
-                this.os = "Linux";
-            }
-            this.prefs.setCharPref("os", this.os);
+        if (navigator.platform.indexOf("Win")===0){
+            this.os = "Win";
+        } else {// assuming this works also for MacOS better
+            this.os = "Linux";
         }
+        this.prefs = Services.prefs.getBranch("extensions.lyz.");
+        this.setDefaultPrefs()
         
         this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                 .getService(Components.interfaces.nsIWindowMediator);
@@ -35,15 +31,28 @@ Zotero.Lyz = {
 
         var sqlDocs = "CREATE TABLE IF NOT EXISTS docs (id INTEGER PRIMARY KEY, doc TEXT, bib TEXT)";
         var sqlKeys = "CREATE TABLE IF NOT EXISTS keys (id INTEGER PRIMARY KEY, key TEXT, bib TEXT, zid TEXT)";
-        Zotero.Promise.coroutine(function*(context) {
-            yield Zotero.Schema.schemaUpdatePromise
-            context.DB = new Zotero.DBConnection("lyz");
-            yield context.DB.queryAsync(sqlDocs);
-            yield context.DB.queryAsync(sqlKeys);
-            if (context.prefs.getBoolPref('checkZotero5Migration')) {
-                context.migrateToZotero5()
-            }
-        })(this)
+        this.DB = new Zotero.DBConnection("lyz");
+        await this.DB.queryAsync(sqlDocs);
+        await this.DB.queryAsync(sqlKeys);
+        if (this.prefs.getBoolPref('checkZotero5Migration')) {
+            this.migrateToZotero5()
+        }
+    },
+
+    setDefaultPrefs: function() {
+        var defaults = Services.prefs.getDefaultBranch("extensions.lyz.")
+        if (this.os == "Win") {
+            defaults.setCharPref("lyxserver", "\\\\.\\pipe\\lyxpipe");
+        } else {
+            defaults.setCharPref("lyxserver", "~/.lyx/lyxpipe");
+        }
+        defaults.setCharPref("citekey", "author year title");
+        defaults.setBoolPref("createCiteKey", true);
+        defaults.setCharPref("selectedTranslator", "9cb70025-a888-4a29-a210-93ec52da40d4");
+        defaults.setBoolPref("use_utf8", false)
+        defaults.setBoolPref("useJournalAbbreviation", false)
+        defaults.setBoolPref("checkZotero5Migration", true)
+
     },
 
     lyxGetDoc : function() {
@@ -245,42 +254,34 @@ Zotero.Lyz = {
         return True;
     },
 
-    settings : function() {
-        if (this.lyzDisableCheck()) {
-            return
+    settings: async function() {
+        var translation = new Zotero.Translate("export")
+        var translators = await translation.getTranslators()
+
+        var params, inn, out;
+        this.wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                .getService(Components.interfaces.nsIWindowMediator);
+        var win = this.wm.getMostRecentWindow("navigator:browser");
+        params = {
+            inn : {
+                citekey : this.prefs.getCharPref("citekey"),
+                createcitekey: this.prefs.getBoolPref("createCiteKey"),
+                lyxserver : this.prefs.getCharPref("lyxserver"),
+                selectedTranslator:this.prefs.getCharPref("selectedTranslator"),
+                translators: translators
+            },
+            out : null
+        };
+        win.openDialog("chrome://lyz/content/settings.xul", "",
+                "chrome, dialog, modal, centerscreen, resizable=yes", params);
+
+        if (params.out) {
+            this.prefs.setCharPref("citekey", params.out.citekey);
+            this.prefs.setCharPref("lyxserver", params.out.lyxserver);
+            this.prefs.setBoolPref("createCiteKey", params.out.createcitekey);
+            this.prefs.setCharPref("selectedTranslator",params.out.selectedTranslator);
+            this.prefs.setBoolPref("useJournalAbbreviation",params.out.useJournalAbbreviation);
         }
-
-        function openSettings(context, translators) {
-            var params, inn, out;
-            var win = context.wm.getMostRecentWindow("navigator:browser");
-            params = {
-                inn : {
-                    citekey : context.prefs.getCharPref("citekey"),
-                    createcitekey: context.prefs.getBoolPref("createCiteKey"),
-                    lyxserver : context.prefs.getCharPref("lyxserver"),
-                    selectedTranslator:context.prefs.getCharPref("selectedTranslator"),
-                    translators:translators
-                },
-                out : null
-            };
-            win.openDialog("chrome://lyz/content/settings.xul", "",
-                    "chrome, dialog, modal, centerscreen, resizable=yes", params);
-
-            if (params.out) {
-                context.prefs.setCharPref("citekey", params.out.citekey);
-                context.prefs.setCharPref("lyxserver", params.out.lyxserver);
-                context.prefs.setBoolPref("createCiteKey", params.out.createcitekey);
-                context.prefs.setCharPref("selectedTranslator",params.out.selectedTranslator);
-                context.prefs.setBoolPref("useJournalAbbreviation",params.out.useJournalAbbreviation);
-            }
-        }
-
-        var translation = new Zotero.Translate("export");
-
-        Zotero.Promise.coroutine(function* (context) {
-            var translators = yield translation.getTranslators()
-            openSettings(context, translators)
-        })(this)
     },
 
     exportToBibliography : function(item) {
