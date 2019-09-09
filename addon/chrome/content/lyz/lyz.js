@@ -406,46 +406,79 @@ Zotero.Lyz = {
         var keyhash = Zotero.Items.parseLibraryKeyHash(key);
         return Zotero.Items.getByLibraryAndKey(keyhash.libraryID, keyhash.key);
     },
-    
-    
 
-    dialog_FilePickerOpen : function(win, title, filter_title, filter) {
-        var nsIFilePicker = Components.interfaces.nsIFilePicker;
-        var fp = Components.classes["@mozilla.org/filepicker;1"]
-                .createInstance(nsIFilePicker);
-        fp.init(win, title, nsIFilePicker.modeOpen);
+    getFilePicker: async function() {
+        const version = /^(\d+)\.(\d+)\.(\d+)/.exec(Zotero.version)
+        const preFP = version[1] == 5 && version[2] == 0 && version[3] < 75
+        if (preFP) {
+            var nsIFilePicker = Components.interfaces.nsIFilePicker
+            var fp = Components.classes["@mozilla.org/filepicker;1"]
+                    .createInstance(nsIFilePicker)
+        } else {
+            var FilePicker = require('zotero/filePicker').default
+            var fp = new FilePicker()
+        }
+
+        return [preFP, fp]
+    },
+
+    dialog_FilePickerOpen: async function(win, title, filter_title, filter) {
+        var [preFP, fp] = await this.getFilePicker()
+        fp.init(win, title, fp.modeOpen);
         fp.appendFilter(filter_title, filter);
-        var res = fp.show();
-        if (res == nsIFilePicker.returnOK) {
-            return fp.file;
+        if (preFP) {
+            var res = fp.show()
+        } else {
+            var res = await fp.show()
+        }
+        if (res == fp.returnOK) {
+            if (preFP) {
+                return fp.file.path
+            } else {
+                return fp.file
+            }
         }
         return null;
     },
 
-    dialog_FilePickerSave : function(win, title, filter_title, filter) {
-        var nsIFilePicker = Components.interfaces.nsIFilePicker;
-        var fp = Components.classes["@mozilla.org/filepicker;1"]
-                .createInstance(nsIFilePicker);
-        fp.init(win, title, nsIFilePicker.modeSave);
+    dialog_FilePickerSave: async function(win, title, filter_title, filter) {
+        var [preFP, fp] = await this.getFilePicker()
+        fp.init(win, title, fp.modeSave);
         fp.appendFilter(filter_title, filter);
-        var res = fp.show();
-        if (res == nsIFilePicker.returnOK) {
+        if (preFP) {
+            var res = fp.show()
+        } else {
+            var res = await fp.show()
+        }
+        var path
+        if (res == fp.returnOK) {
             // add default extension, guess there must be other way to do it
             // but this is what came to my mind first
-            if (fp.file.path.split(".").length < 2) {
+            if (preFP) {
+                path = fp.file.path
+            } else {
+                path = fp.file
+            }
+
+            if (path.split(".").length < 2) {
                 // this is weird, but I don't know how to set new path
                 var file = Components.classes["@mozilla.org/file/local;1"]
                         .createInstance(Components.interfaces.nsIFile);
-                file.initWithPath(fp.file.path + ".bib");
+                file.initWithPath(path + ".bib");
                 file.create(file.NORMAL_FILE_TYPE, 0666);
                 return file;
             } else {// overwrite the file if it exists
                 this.replace = true;
-                return fp.file;
+                return path
             }
-        } else if (res == nsIFilePicker.returnReplace) {
+        } else if (res == fp.returnReplace) {
             this.replace = true;
-            return fp.file;
+            if (preFP) {
+                path = fp.file.path
+            } else {
+                path = fp.file
+            }
+            return path
         } else {
             return false;
         }
@@ -503,9 +536,6 @@ Zotero.Lyz = {
     },
 
     test: function() {
-        if (this.lyzDisableCheck()) {
-            return
-        }
         var win = this.wm.getMostRecentWindow("navigator:browser");
         var t = prompt("Command", "server-get-filename");
         if (!t) {
@@ -526,7 +556,7 @@ Zotero.Lyz = {
         win.alert("DONE");
     },
 
-    checkDocInDB: Zotero.Promise.coroutine(function*() {
+    checkDocInDB: async function() {
         var doc, res;
         var win = this.wm.getMostRecentWindow("navigator:browser");
         doc = this.lyxGetDoc();
@@ -534,16 +564,16 @@ Zotero.Lyz = {
             win.alert("Could not retrieve document name.");
             return null;
         }
-        res = yield this.DB.queryAsync("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
+        res = await this.DB.queryAsync("SELECT doc,bib FROM docs WHERE doc = ?",[doc]);
         if (res.length === 0) {
             return [ res, doc ];
         }
         return [res[0].bib, doc];
-    }),
+    },
 
-    addNewDocument: Zotero.Promise.coroutine(function*(doc, bib) {
-        yield this.DB.queryAsync("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
-    }),
+    addNewDocument: async function(doc, bib) {
+        await this.DB.queryAsync("INSERT INTO docs (doc,bib) VALUES(?,?)",[doc,bib]);
+    },
 
     exportToBibtex: Zotero.Promise.coroutine(function*(items, bib, zids) {
         // returns hash {id:[citekey,text]}
@@ -735,10 +765,7 @@ Zotero.Lyz = {
         return [ citekey, text ];
     }),
 
-    checkAndCite: Zotero.Promise.coroutine(function*() {
-        if (this.lyzDisableCheck()) {
-            return
-        }
+    checkAndCite: async function() {
         // export citation to Bibtex
         var win = this.wm.getMostRecentWindow("navigator:browser");
         var zitems = win.ZoteroPane.getSelectedItems();
@@ -748,10 +775,9 @@ Zotero.Lyz = {
             return;
         }
         // check document name
-        var res = yield this.checkDocInDB();
+        var res = await this.checkDocInDB();
         var bib = res[0];
         var doc = res[1];
-        var bib_file;
         var items;
         var keys;
         var entries_text = "";
@@ -764,25 +790,24 @@ Zotero.Lyz = {
             // FIXME: the buttons don't show correctly, STD_YES_NO_BUTTONS doesn't work
             res = win.confirm(t, "BibTex database selection");
             if (res) {
-                bib_file = this.dialog_FilePickerSave(win,
+                bib = await this.dialog_FilePickerSave(win,
                         "Select Bibtex file for " + doc, "Bibtex", "*.bib");
-                if (!bib_file)
+                if (!bib)
                     return;
 
             } else {
-                bib_file = this.dialog_FilePickerOpen(win,
+                bib = await this.dialog_FilePickerOpen(win,
                         "Select Bibtex file for " + doc, "Bibtex", "*.bib");
-                if (!bib_file)
+                if (!bib)
                     return;
             }
 
-            bib = bib_file.path;
-            if (bib_file)
-                yield this.addNewDocument(doc, bib);
+            if (bib)
+                await this.addNewDocument(doc, bib);
             else
                 return;//file dialog canceled
         }
-        items = yield this.exportToBibtex(zitems, bib);
+        items = await this.exportToBibtex(zitems, bib);
         keys = [];
         var zids = [];
 
@@ -792,10 +817,10 @@ Zotero.Lyz = {
             keys.push(citekey);
             //check database, if not in, append to entries_text
             //single key can be associated with several bibtex files
-            res = yield this.DB.queryAsync("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
+            res = await this.DB.queryAsync("SELECT key FROM keys WHERE bib=? AND zid=?",[bib,zid]);
 
             if (res.length === 0) {
-                yield this.DB.queryAsync("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
+                await this.DB.queryAsync("INSERT INTO keys VALUES(null,?,?,?)",[citekey,bib,zid]);
                 zids.push(zid);
                 entries_text += text;
             } else if (res[0].key != citekey) {
@@ -828,12 +853,9 @@ Zotero.Lyz = {
         } else {
             res = this._lyxAskServer("citation-insert:" + keys.join(","));
         }
-    }),
+    },
 
     updateBibtexAll: Zotero.Promise.coroutine(function*() {
-        if (this.lyzDisableCheck()) {
-            return
-        }
         //first update from the bibtex file
         
         yield this.updateFromBibtexFile();
@@ -946,9 +968,6 @@ Zotero.Lyz = {
     }),
 
     dbDeleteBib: Zotero.Promise.coroutine(function*() {
-        if (this.lyzDisableCheck()) {
-            return
-        }
         var win = this.wm.getMostRecentWindow("navigator:browser");
         var dic = yield this.DB.queryAsync("SELECT bib FROM keys GROUP BY bib");
         var params = {
@@ -966,6 +985,9 @@ Zotero.Lyz = {
         if (params.out) {
             bib = params.out.item;
         }
+        if (!bib) {
+            return
+        }
         res = win.confirm("You are about to delete record of BibTeX database:\n" +
                           bib +
                           "\nRecord about associated documents will also be deleted.\n",
@@ -977,9 +999,6 @@ Zotero.Lyz = {
     }),
 
     dbDeleteDoc: Zotero.Promise.coroutine(function*(doc, bib) {
-        if (this.lyzDisableCheck()) {
-            return
-        }
         var win = this.wm.getMostRecentWindow("navigator:browser");
         var dic = yield this.DB.queryAsync("SELECT doc FROM docs");
         var params = {
@@ -997,6 +1016,9 @@ Zotero.Lyz = {
         if (params.out) {
             doc = params.out.item;
         }
+        if (!doc) {
+            return
+        }
         res = win.confirm("Do you really want to delete the LyZ database record of the document\n" +
                           doc + "?");
         if (!res)
@@ -1004,12 +1026,9 @@ Zotero.Lyz = {
         yield this.DB.queryAsync("DELETE FROM docs WHERE doc=?",[doc]);
     }),
 
-    dbRenameDoc: Zotero.Promise.coroutine(function*() {
-        if (this.lyzDisableCheck()) {
-            return
-        }
+    dbRenameDoc: async function() {
         var win = this.wm.getMostRecentWindow("navigator:browser");
-        var dic = yield this.DB.queryAsync("SELECT id,doc FROM docs");
+        var dic = await this.DB.queryAsync("SELECT id,doc FROM docs");
         var params = {
             inn : {
                 items : dic,
@@ -1025,48 +1044,18 @@ Zotero.Lyz = {
         if (params.out) {
             doc = params.out.item;
         }
-        var newfname = this.dialog_FilePickerOpen(win,
-                "Select LyX document for " + doc, "LyX", "*.lyx").path;
+        var newfname = await this.dialog_FilePickerOpen(win,
+                "Select LyX document for " + doc, "LyX", "*.lyx")
         // have to replace \ with / on windows because lyxserver returns unix style paths
         newfname = newfname.replace(/\\/g, "/");
         if (!newfname)
             return;
-        yield this.DB.queryAsync("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
-    }),
+        await this.DB.queryAsync("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
+    },
 
-    dbRenameDoc: Zotero.Promise.coroutine(function*() {
-        if (this.lyzDisableCheck()) {
-            return
-        }
+    dbRenameBib: async function() {
         var win = this.wm.getMostRecentWindow("navigator:browser");
-        var dic = yield this.DB.queryAsync("SELECT id,doc FROM docs");
-        var params = {
-            inn : {
-                items : dic,
-                type : "doc"
-            },
-            out : null
-        };
-        var res = win.openDialog("chrome://lyz/content/select.xul", "",
-                "chrome, dialog, modal, centerscreen, resizable=yes", params);
-        if (!params.out)
-            return;
-        var doc;
-        if (params.out) {
-            doc = params.out.item;
-        }
-        var newfname = this.dialog_FilePickerOpen(win,
-                "Select LyX document for " + doc, "LyX", "*.lyx").path;
-        // have to replace \ with / on windows because lyxserver returns unix style paths
-        newfname = newfname.replace(/\\/g, "/");
-        if (!newfname)
-            return;
-        yield this.DB.queryAsync("UPDATE docs SET doc=? WHERE doc=?",[newfname,doc]);
-    }),
-
-    dbRenameBib: Zotero.Promise.coroutine(function*() {
-        var win = this.wm.getMostRecentWindow("navigator:browser");
-        var dic = yield this.DB.queryAsync("SELECT DISTINCT bib FROM docs");
+        var dic = await this.DB.queryAsync("SELECT DISTINCT bib FROM docs");
         var params = {
             inn : {
                 items : dic,
@@ -1082,13 +1071,13 @@ Zotero.Lyz = {
         if (params.out) {
             bib = params.out.item;
         }
-        newfname = this.dialog_FilePickerOpen(win, "Select Bibtex file for " +
-                                              bib, "Bibtex", "*.bib").path;
+        newfname = await this.dialog_FilePickerOpen(win, "Select Bibtex file for " +
+                                              bib, "Bibtex", "*.bib")
         if (!newfname)
             return;
-        yield this.DB.queryAsync("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
-        yield this.DB.queryAsync("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
-    }),
+        await this.DB.queryAsync("UPDATE docs SET bib=? WHERE bib=?",[newfname,bib]);
+        await this.DB.queryAsync("UPDATE keys SET bib=? WHERE bib=?",[newfname,bib]);
+    },
 
     shutdown: Zotero.Promise.coroutine(function*() {
         yield Zotero.Lyz.DB.closeDatabase(true)
