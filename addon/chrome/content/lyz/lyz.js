@@ -409,7 +409,7 @@ Zotero.Lyz = {
 
     getFilePicker: async function() {
         const version = /^(\d+)\.(\d+)\.(\d+)/.exec(Zotero.version)
-        const preFP = version[1] == 5 && version[2] == 0 && version[3] < 75
+        const preFP = Zotero.platformMajorVersion < 60
         if (preFP) {
             var nsIFilePicker = Components.interfaces.nsIFilePicker
             var fp = Components.classes["@mozilla.org/filepicker;1"]
