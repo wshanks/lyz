@@ -27,6 +27,10 @@ Installation and Settings
 4. By default all characters are escaped, e.g. š becomes \v{s}. Set `extensions.lyz.use_utf8` to true in `about:config` to avoid escaping (in case you need to use non-latin scripts such as Chinese).
 5. Open document in LyX.
 
+**NOTE for Firefox users:** Firefox treats `.xpi` files as Firefox add-ons and tries to install them.
+It is not possible to download the `.xpi` file with Firefox at this time.
+You must download it either with a different browser or with a command-line tool like `curl` or `wget`.
+
 Adding and inserting citations
 ------------------------------
 1. Open the LyX document you want to add a citation to and put the cursor at the point in the text at which you want the citation added.
