@@ -28,8 +28,14 @@ Installation and Settings
 5. Open document in LyX.
 
 **NOTE for Firefox users:** Firefox treats `.xpi` files as Firefox add-ons and tries to install them.
-It is not possible to download the `.xpi` file with Firefox at this time.
-You must download it either with a different browser or with a command-line tool like `curl` or `wget`.
+To download:  
+1. Right click on link  
+2. Select 'Save Link As'  
+3. Select a folder to save in  
+4. Click 'Save'  
+5. The file will now download  
+
+You can also download it either with a different browser or with a command-line tool like `curl` or `wget`.
 
 Adding and inserting citations
 ------------------------------
