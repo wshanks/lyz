@@ -410,13 +410,25 @@ Zotero.Lyz = {
     getFilePicker: async function() {
         const version = /^(\d+)\.(\d+)\.(\d+)/.exec(Zotero.version)
         const preFP = Zotero.platformMajorVersion < 60
+        let fp;
         if (preFP) {
             var nsIFilePicker = Components.interfaces.nsIFilePicker
-            var fp = Components.classes["@mozilla.org/filepicker;1"]
+            fp = Components.classes["@mozilla.org/filepicker;1"]
                     .createInstance(nsIFilePicker)
         } else {
-            var FilePicker = require('zotero/filePicker').default
-            var fp = new FilePicker()
+            let FilePicker;
+            if (
+                version["1"] == "5" &&
+                version["2"] == "0" &&
+                parseInt(version["3"], 10) < 97
+            ) {
+              Services.console.logStringMessage("old system")
+                FilePicker = require('zotero/filePicker').default
+            } else {
+              Services.console.logStringMessage("new system")
+                FilePicker = require('zotero/modules/filePicker').default
+            }
+            fp = new FilePicker()
         }
 
         return [preFP, fp]
