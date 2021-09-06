@@ -10,7 +10,7 @@
                         <em:targetApplication>
                             <rdf:Description>
                                 <em:id>zotero@chnm.gmu.edu</em:id>
-                                <em:minVersion>5.0.24</em:minVersion>
+                                <em:minVersion>5.0.97</em:minVersion>
                                 <em:maxVersion>*</em:maxVersion>
                                 <em:updateLink>https://github.com/wshanks/lyz/releases/download/v4.1.2a1/lyz.xpi</em:updateLink>
                             </rdf:Description>
@@ -19,7 +19,7 @@
                         <em:targetApplication>
                             <rdf:Description>
                                 <em:id>juris-m@juris-m.github.io</em:id>
-                                <em:minVersion>5.0.24</em:minVersion>
+                                <em:minVersion>5.0.97</em:minVersion>
                                 <em:maxVersion>*</em:maxVersion>
                                 <em:updateLink>https://github.com/wshanks/lyz/releases/download/v4.1.2a1/lyz.xpi</em:updateLink>
                             </rdf:Description>
