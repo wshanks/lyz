@@ -6,7 +6,7 @@
     <em:id>lyz@zotero.org</em:id>
     <em:version>4.1.2a1</em:version>
 	<em:multiprocessCompatible>true</em:multiprocessCompatible>
-        <em:updateURL>https://raw.githubusercontent.com/willsALMANJ/lyz/release/deploy/update.rdf</em:updateURL>
+        <em:updateURL>https://raw.githubusercontent.com/wshanks/lyz/release/deploy/update.rdf</em:updateURL>
     <em:type>2</em:type>
     <em:unpack>true</em:unpack>
     <!-- Target Application this extension can install into, 
@@ -28,6 +28,6 @@
   <em:name>LyZ</em:name>
   <em:description>LyX integration plugin.</em:description>
   <em:creator>Petr Šimon</em:creator>
-  <em:homepageURL>https://github.com/willsALMANJ/lyz</em:homepageURL>
+  <em:homepageURL>https://github.com/wshanks/lyz</em:homepageURL>
   </Description>      
 </RDF>

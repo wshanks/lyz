@@ -1,5 +1,5 @@
 github:
-    user: willsalmanj
+    user: wshanks
     repo: lyz 
     token: deploy/github.token
     assets:
@@ -16,4 +16,4 @@ version_strings:
 - path: deploy/update.rdf
   pattern: (<em:version>)(?P<release>.*)(</em:version>)
 - path: deploy/update.rdf
-  pattern: (<em:updateLink>https://github.com/willsALMANJ/lyz/releases/download/v)(?P<release>.*)(/lyz.xpi</em:updateLink>)
+  pattern: (<em:updateLink>https://github.com/wshanks/lyz/releases/download/v)(?P<release>.*)(/lyz.xpi</em:updateLink>)

@@ -1,6 +1,6 @@
 LyZ
 ---
-LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant. The latest source code is available at [GitHub](https://github.com/willsALMANJ/lyz). The latest stable release is available from [the GitHub releases page](https://github.com/willsALMANJ/lyz/releases).
+LyZ is a plugin for [Zotero](http://www.zotero.org), which is intended to make working with LyX/Zotero more pleasant. The latest source code is available at [GitHub](https://github.com/wshanks/lyz). The latest stable release is available from [the GitHub releases page](https://github.com/wshanks/lyz/releases).
 
 Features
 --------
@@ -15,13 +15,13 @@ Features
 * Persistent association of LyX documents and BibTeX databases.
 * Support for group cooperation.
 
-**NOTE:** As of version 4.0, LyZ is distributed from the [GitHub releases page](https://github.com/willsALMANJ/lyz/releases).
+**NOTE:** As of version 4.0, LyZ is distributed from the [GitHub releases page](https://github.com/wshanks/lyz/releases).
 New updates will not be published to the location checked by previous versions of LyZ (the Mozilla Add-ons page).
 To receive new LyZ updates, please update to the latest version of LyZ.
 
 Installation and Settings
 -------------------------
-1. Download the lyz `.xpi` file from the [GitHub releases page](https://github.com/willsALMANJ/lyz/releases).
+1. Download the lyz `.xpi` file from the [GitHub releases page](https://github.com/wshanks/lyz/releases).
 2. Install LyZ in Zotero by selecting Add-ons from the Tools menu and then clicking the gear icon in the Add-ons window, selecting "Install add-on from file" and selecting the lyz `.xpi` file.
 3. Open LyX and set LyXServer path (in LyX go to menu, Tools > Preferences... > Paths and set LyXServer pipe to): Windows users can use the default path setting in LyZ, i.e. `\\.\pipe\lyxpipe`. Linux and Mac users can use e.g. `~/.lyxpipe` and change the LyZ settings accordingly.
 4. By default all characters are escaped, e.g. š becomes \v{s}. Set `extensions.lyz.use_utf8` to true in `about:config` to avoid escaping (in case you need to use non-latin scripts such as Chinese).
@@ -119,7 +119,7 @@ Please follow these tips to find out the source of your problem:
 
 * Extract useful information from Zotero’s Error Console (by starting Zotero on the command line with the `--jsconsole` option) and from commandline where you ran `lyx.exe -dbg lyxserver`.
 
-* Peruse the Issues opened by other users at [https://github.com/willsALMANJ/lyz](https://github.com/willsALMANJ/lyz).  Be sure to check the closed issues as well to see if a solution has already been found for your problem.  If not, open a new issue.
+* Peruse the Issues opened by other users at [https://github.com/wshanks/lyz](https://github.com/wshanks/lyz).  Be sure to check the closed issues as well to see if a solution has already been found for your problem.  If not, open a new issue.
 
 Common Issues
 -------------
@@ -143,5 +143,5 @@ How to Contribute
 
 Credits
 -------
-Lyz was written by  Petr Šimon.  It is inspired by Lytero, which Petr wanted to improve, but he ended up starting from scratch. Hence the new name. Thanks to Dan Stillman and mronkko at zotero.org forum. Justin Wood for BOM and escaping suggestions and donation!  It is currently maintained on GitHub by willsALMANJ.
+Lyz was written by  Petr Šimon.  It is inspired by Lytero, which Petr wanted to improve, but he ended up starting from scratch. Hence the new name. Thanks to Dan Stillman and mronkko at zotero.org forum. Justin Wood for BOM and escaping suggestions and donation!  It is currently maintained on GitHub by Will Shanks.
 3. Submit new features or translations. However, keep in mind that new features add to the maintenance burden of the project. So get in contact before putting a lot of time into a new feature.
